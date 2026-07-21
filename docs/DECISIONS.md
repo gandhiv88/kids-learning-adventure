@@ -1,0 +1,123 @@
+# Decisions
+
+This is a chronological product and architecture decision log. Dates use the repository commit dates where available.
+
+## 2026-07-21 - Active Companion Only
+
+Status: Accepted.
+
+Context: Milestone 1 introduced character choice, and later refinement clarified that the app has one local learner profile.
+
+Decision: Character selection changes only the active companion and never resets or separates progress.
+
+Consequences: Progress storage keeps one selected companion value. Changing companions must preserve lesson progress, best scores, and cumulative stars.
+
+## 2026-07-21 - Balanced Answer Positions
+
+Status: Accepted.
+
+Context: Early fixed choice ordering made correct answers too predictable.
+
+Decision: Correct-answer positions are balanced and must not be predictable.
+
+Consequences: Generated sessions use deterministic seeded shuffling. Tests assert balanced positions and avoid long same-position runs.
+
+## 2026-07-21 - Session Stars And Adventure Stars
+
+Status: Accepted.
+
+Context: The app needs immediate lesson feedback while preserving long-term earned progress.
+
+Decision: Session stars and cumulative adventure stars are distinct.
+
+Consequences: Results can show both the current attempt score and the saved adventure-star total.
+
+## 2026-07-21 - Best-Score Star Growth
+
+Status: Accepted.
+
+Context: Replays should encourage practice without allowing unlimited star farming or reducing earned progress.
+
+Decision: Cumulative adventure stars increase only when a lesson best score improves.
+
+Consequences: Lower or equal replays add zero cumulative stars. Improved replays add only the difference between old best and new best.
+
+## 2026-07-21 - Completion Unlocks Next Lesson
+
+Status: Accepted.
+
+Context: The child should be able to keep moving through the early path without being blocked by a single low first-attempt score.
+
+Decision: Lesson completion unlocks the next lesson even when the first-attempt star score is low.
+
+Consequences: The current unlocking model is completion-based, not mastery-based. Mastery-based promotion is planned later.
+
+## 2026-07-21 - Local Procedural Questions
+
+Status: Accepted.
+
+Context: The MVP must work locally without accounts, APIs, or databases.
+
+Decision: Core questions are procedurally generated locally.
+
+Consequences: Arithmetic generation, validation, and tests live in the repository. No OpenAI API is needed for current core sessions.
+
+## 2026-07-21 - Recent Repeat Protection
+
+Status: Accepted for future implementation.
+
+Context: Procedural sessions need variety without permanently banning useful review.
+
+Decision: Exact recent questions should be avoided while allowing later spaced repetition.
+
+Consequences: Milestone 3A should add repeat protection metadata and tests. It should not remove spaced review.
+
+## 2026-07-21 - Skill-Based Mastery
+
+Status: Accepted for future implementation.
+
+Context: A single global ability label would be misleading and unhelpful for parent support.
+
+Decision: Learning mastery is tracked per skill, not as a general "smartness" score.
+
+Consequences: Future progress models should record skill-level evidence. Parent-facing language should describe skills, not fixed ability.
+
+## 2026-07-21 - Teach Before Assessing
+
+Status: Accepted for future implementation.
+
+Context: New concepts should not appear as cold assessments.
+
+Decision: New concepts require teaching and guided practice before independent assessment.
+
+Consequences: Milestone 3B should introduce worked examples, guided practice, hints, and mastery checks before promotion.
+
+## 2026-07-21 - Defer OpenAI API
+
+Status: Accepted.
+
+Context: The local curriculum and adaptation systems should be proven before introducing cost, network dependency, secrets, or server concerns.
+
+Decision: The OpenAI API is postponed until the local curriculum and adaptation systems are proven.
+
+Consequences: Current and Milestone 3A core arithmetic remains local and deterministic.
+
+## 2026-07-21 - Optional Future OpenAI Uses
+
+Status: Accepted for future implementation.
+
+Context: AI can help enrich the experience, but live generation of every arithmetic question would complicate validation and reliability.
+
+Decision: Future OpenAI use should focus on optional stories, teaching explanations, parent summaries, worksheets, and periodic content enhancement, not live generation of every arithmetic question.
+
+Consequences: Any future AI layer should be server-side, optional, validated, and outside the deterministic local core.
+
+## 2026-07-21 - Multi-Digit Arithmetic Prerequisites
+
+Status: Accepted for future implementation.
+
+Context: Larger arithmetic should follow conceptual readiness, not milestone number.
+
+Decision: Three- and four-digit arithmetic unlock through prerequisite mastery.
+
+Consequences: Milestone 3A must not add three- or four-digit arithmetic. Later implementation should require place value, regrouping, and estimation prerequisites.

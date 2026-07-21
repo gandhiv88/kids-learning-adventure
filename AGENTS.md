@@ -110,13 +110,26 @@ Do not add:
 Before modifying code:
 
 1. Read this file.
-2. Inspect the repository.
-3. Summarize the requested feature.
-4. Identify files that will change.
-5. Make the smallest complete change.
-6. Run linting, type checking, tests, and the production build.
-7. Fix failures before reporting completion.
-8. Summarize what changed and how to test it.
+2. Read the relevant project documentation under `docs/` before planning or implementing a milestone. At minimum, review `docs/PRODUCT_VISION.md`, `docs/CURRICULUM.md`, `docs/ARCHITECTURE.md`, `docs/DECISIONS.md`, `docs/ROADMAP.md`, and the milestone document for the requested work.
+3. Inspect the repository.
+4. Summarize the requested feature.
+5. Identify files that will change.
+6. Make the smallest complete change.
+7. Run linting, type checking, tests, and the production build.
+8. Fix failures before reporting completion.
+9. Summarize what changed and how to test it.
+
+## Stable engineering requirements
+
+* Preserve separation between domain logic, persistence, and React UI.
+* Use deterministic seeded question generation.
+* Keep generated questions programmatically validated.
+* Maintain accessibility and iPad Safari support.
+* Run lint, typecheck, tests, and the production build before reporting completion.
+* Do not reset learning progress when changing companions.
+* Do not expose API keys to client code.
+* Do not introduce external APIs, databases, or major dependencies without explicit milestone scope.
+* Update project documentation whenever product behavior, persistence, curriculum, or architecture changes.
 
 ## Git rules
 
