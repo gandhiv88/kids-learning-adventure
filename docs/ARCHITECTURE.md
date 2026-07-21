@@ -42,7 +42,7 @@ There are six ordered Number Forest lessons:
 5. `skip-counting-1`.
 6. `forest-challenge-1`.
 
-Each lesson belongs to `number-forest`, has eight questions, declares one or more `skillFocus` values, and declares supported difficulty bands. Milestone 3A preserves the six-lesson map and uses the expanded generator behind those lessons.
+Each lesson belongs to `number-forest`, has ten questions, declares one or more `skillFocus` values, and declares supported difficulty bands. The deterministic session composer enforces six number-entry questions, then one multiple-choice, matching, visual-selection, and fraction-coloring activity.
 
 ## Curriculum Engine
 
@@ -64,7 +64,7 @@ Generation is deterministic for a `(lessonId, seed, history)` input. It uses a l
 * `templateId`.
 * `difficulty`.
 * `prompt`.
-* Four choices.
+* Explicit interaction data for number entry, multiple choice, matching, visual selection, or fraction coloring.
 * Optional display labels for choices such as clock times, comparison symbols, and fractions.
 * One `correctAnswer`.
 * A short `hint`.
@@ -72,9 +72,9 @@ Generation is deterministic for a `(lessonId, seed, history)` input. It uses a l
 
 Generated kinds include number bond, addition, subtraction, missing addend, skip counting, place value, number comparison, clock reading, fraction, and word problem. Subtraction generation avoids negative answers. The forest challenge cycles through its skill focuses and now includes place value, comparison, and word-problem review.
 
-Correct-answer positions are balanced across each eight-question lesson by combining two shuffled permutations of positions 0 through 3. Tests assert that all four positions are used and that long same-position runs are avoided.
+The session composer intentionally fixes the interaction distribution rather than balancing answer positions across every question: number entry is the default, and the sole multiple-choice activity is never adjacent to another multiple-choice activity.
 
-Every generated question is validated before it is returned. Validation checks prompt and hint presence, four distinct choices, correct answer appearing once, non-negative subtraction, valid clock answers, valid fraction answers, and absence of multiplication or division symbols.
+Every generated question is validated before it is returned. Validation checks prompt and hint presence, mode-specific choice, pair, visual, and fraction data, non-negative subtraction, valid clock answers, valid fraction answers, and absence of multiplication or division symbols.
 
 Recent-question tracking is framework-independent. `QuestionHistory` stores recent question keys and operand keys. The generator avoids exact recent repeats and recent operand patterns where practical, then falls back only as needed so lessons remain generatable. History is capped so older material can return for spaced review.
 
@@ -82,7 +82,7 @@ The repository also contains older Milestone 1 fixed-template generation in `lib
 
 ## Scoring
 
-In the active Number Forest flow, a lesson score is the number of correct first selections in an eight-question lesson. After a choice is selected, the current UI disables the answer choices and shows the next button. Incorrect answers reveal the correct answer and provide a hint; they do not allow retry within the same question.
+In the active Number Forest flow, a lesson score is the number of correct first submitted answers in a ten-question lesson. All modes use the same framework-independent evaluation helpers. Incorrect submissions give a hint and permit a retry without a star; answers are not revealed after the first error.
 
 Session stars and cumulative adventure stars are distinct:
 

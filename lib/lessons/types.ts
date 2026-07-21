@@ -1,106 +1,23 @@
 export type CharacterId = "moss" | "luna" | "ember";
-
-export type LessonId =
-  | "number-bonds-1"
-  | "addition-1"
-  | "missing-addends-1"
-  | "subtraction-1"
-  | "skip-counting-1"
-  | "forest-challenge-1";
-
+export type LessonId = "number-bonds-1" | "addition-1" | "missing-addends-1" | "subtraction-1" | "skip-counting-1" | "forest-challenge-1";
 export type DifficultyBand = "review" | "core" | "challenge";
-export type SkillId =
-  | "number-bond"
-  | "addition"
-  | "subtraction"
-  | "missing-addend"
-  | "skip-counting"
-  | "place-value"
-  | "number-comparison"
-  | "clock-reading"
-  | "fraction"
-  | "word-problem";
+export type SkillId = "number-bond" | "addition" | "subtraction" | "missing-addend" | "skip-counting" | "place-value" | "number-comparison" | "clock-reading" | "fraction" | "word-problem";
 export type QuestionKind = SkillId;
-export type QuestionTemplateId =
-  | "bond-missing-part"
-  | "bond-two-parts"
-  | "addition-sum"
-  | "addition-make-ten"
-  | "subtraction-difference"
-  | "subtraction-missing-take"
-  | "missing-addend-first"
-  | "missing-addend-second"
-  | "skip-counting-next"
-  | "skip-counting-missing"
-  | "place-value-value"
-  | "place-value-expanded"
-  | "comparison-symbol"
-  | "comparison-greater-less"
-  | "clock-time"
-  | "clock-elapsed"
-  | "fraction-shaded"
-  | "fraction-compare"
-  | "word-addition"
-  | "word-subtraction"
-  | "word-missing-addend";
-
-export type Prerequisite = {
-  skillId: SkillId;
-  difficulty: DifficultyBand;
-};
-
-export type SkillDefinition = {
-  id: SkillId;
-  title: string;
-  description: string;
-  prerequisites: readonly Prerequisite[];
-  difficultyBands: readonly DifficultyBand[];
-  templateIds: readonly QuestionTemplateId[];
-  estimatedVariety: number;
-};
-
-export type QuestionTemplate = {
-  id: QuestionTemplateId;
-  skillId: SkillId;
-  difficultyBands: readonly DifficultyBand[];
-  estimatedVariety: number;
-};
-
-export type LessonDefinition = {
-  id: LessonId;
-  worldId: "number-forest";
-  title: string;
-  shortTitle: string;
-  description: string;
-  skillFocus: readonly SkillId[];
-  difficultyBands: readonly DifficultyBand[];
-  questionCount: 8;
-  order: number;
-};
-
-export type Question = {
-  id: string;
-  kind: QuestionKind;
-  templateId: QuestionTemplateId;
-  difficulty: DifficultyBand;
-  prompt: string;
-  choices: readonly number[];
-  choiceLabels?: Readonly<Record<number, string>>;
-  correctAnswer: number;
-  hint: string;
-  questionKey: string;
-  operandKeys: readonly string[];
-};
-
-export type QuestionHistory = {
-  recentQuestionKeys: readonly string[];
-  recentOperandKeys: readonly string[];
-};
+export type QuestionTemplateId = "bond-missing-part" | "bond-two-parts" | "addition-sum" | "addition-make-ten" | "subtraction-difference" | "subtraction-missing-take" | "missing-addend-first" | "missing-addend-second" | "skip-counting-next" | "skip-counting-missing" | "place-value-value" | "place-value-expanded" | "comparison-symbol" | "comparison-greater-less" | "clock-time" | "clock-elapsed" | "fraction-shaded" | "fraction-compare" | "word-addition" | "word-subtraction" | "word-missing-addend";
+export type InteractionMode = "number-entry" | "multiple-choice" | "matching" | "visual-selection" | "sequence-completion" | "fraction-coloring";
+export type QuestionBase = { id: string; kind: QuestionKind; templateId: QuestionTemplateId; difficulty: DifficultyBand; prompt: string; correctAnswer: number; hint: string; questionKey: string; operandKeys: readonly string[]; choices?: readonly number[]; choiceLabels?: Readonly<Record<number, string>> };
+export type NumberEntryQuestion = QuestionBase & { interactionMode: "number-entry" };
+export type MultipleChoiceQuestion = QuestionBase & { interactionMode: "multiple-choice"; choices: readonly number[]; choiceLabels?: Readonly<Record<number, string>> };
+export type MatchingPair = { id: string; prompt: string; answer: number; label: string };
+export type MatchingQuestion = QuestionBase & { interactionMode: "matching"; pairs: readonly MatchingPair[]; answerBank: readonly number[] };
+export type VisualSelectionQuestion = QuestionBase & { interactionMode: "visual-selection"; visualOptions: readonly { id: string; label: string; objectCount: number }[]; correctOptionId: string };
+export type FractionColoringQuestion = QuestionBase & { interactionMode: "fraction-coloring"; numerator: number; denominator: 2 | 3 | 4; model: "rectangle" | "circle" | "chocolate-bar" };
+export type SequenceCompletionQuestion = QuestionBase & { interactionMode: "sequence-completion"; sequence: readonly number[]; missingIndex: number };
+export type Question = NumberEntryQuestion | MultipleChoiceQuestion | MatchingQuestion | VisualSelectionQuestion | FractionColoringQuestion | SequenceCompletionQuestion;
+export type Prerequisite = { skillId: SkillId; difficulty: DifficultyBand };
+export type SkillDefinition = { id: SkillId; title: string; description: string; prerequisites: readonly Prerequisite[]; difficultyBands: readonly DifficultyBand[]; templateIds: readonly QuestionTemplateId[]; estimatedVariety: number };
+export type QuestionTemplate = { id: QuestionTemplateId; skillId: SkillId; difficultyBands: readonly DifficultyBand[]; estimatedVariety: number };
+export type LessonDefinition = { id: LessonId; worldId: "number-forest"; title: string; shortTitle: string; description: string; skillFocus: readonly SkillId[]; difficultyBands: readonly DifficultyBand[]; questionCount: 10; order: number };
+export type QuestionHistory = { recentQuestionKeys: readonly string[]; recentOperandKeys: readonly string[] };
 export type LessonProgress = { bestScore: number; completed: boolean };
-export type SavedProgress = {
-  version: 4;
-  selectedCharacter: CharacterId;
-  totalAdventureStars: number;
-  lessonProgress: Partial<Record<LessonId, LessonProgress>>;
-  questionHistory: QuestionHistory;
-};
+export type SavedProgress = { version: 4; selectedCharacter: CharacterId; totalAdventureStars: number; lessonProgress: Partial<Record<LessonId, LessonProgress>>; questionHistory: QuestionHistory };

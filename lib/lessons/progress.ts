@@ -3,7 +3,7 @@ import type { CharacterId, LessonId, LessonProgress, QuestionHistory, SavedProgr
 
 export const emptyQuestionHistory = (): QuestionHistory => ({ recentQuestionKeys: [], recentOperandKeys: [] });
 export const emptyProgress = (): SavedProgress => ({ version: 4, selectedCharacter: "moss", totalAdventureStars: 0, lessonProgress: {}, questionHistory: emptyQuestionHistory() });
-export const clampScore = (score: unknown): number => Math.max(0, Math.min(8, Number.isFinite(score) ? Math.floor(Number(score)) : 0));
+export const clampScore = (score: unknown): number => Math.max(0, Math.min(10, Number.isFinite(score) ? Math.floor(Number(score)) : 0));
 export const isCharacter = (value: unknown): value is CharacterId => value === "moss" || value === "luna" || value === "ember";
 export const normalizedLessonProgress = (value: unknown): LessonProgress | undefined => {
   if (!value || typeof value !== "object") return undefined;

@@ -14,9 +14,9 @@ Delivered answer-position balancing, active companion behavior that preserves pr
 
 Delivered Number Forest, six ordered lessons, map-based lesson selection, sequential unlocking, version 3 progress storage, and tests for lessons, generation, migration, unlocking, and star behavior.
 
-### Milestone 3A: Scalable Local Content Engine
+### Milestone 3A: Scalable Local Content Engine And Mixed Interactions
 
-Delivered a deterministic local curriculum engine with reusable templates, difficulty bands, expanded skill support, question validation, prerequisite metadata, capped recent-question history, and tests. The active app remains local-first and keeps the Milestone 2 Number Forest map.
+Delivered a deterministic local curriculum engine with reusable templates, difficulty bands, expanded skill support, question validation, prerequisite metadata, capped recent-question history, and tests. Completion audit added an intentional ten-question mixed interaction session: mostly number entry plus one multiple-choice, matching, visual selection, and reusable fraction-coloring activity. The active app remains local-first and keeps the Number Forest map; Milestone 3B has not started.
 
 ## Current
 
