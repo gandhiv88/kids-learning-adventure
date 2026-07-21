@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import test from "node:test";
+import { test } from "vitest";
 import { LESSONS } from "../lib/lessons/definitions";
 import { commitLessonResult, emptyProgress, lessonIsUnlocked, migrateProgress, recommendedLessonId, unlockedLessonIds } from "../lib/lessons/progress";
 import { generateLessonQuestions } from "../lib/lessons/questions";
