@@ -1,6 +1,16 @@
 # Milestone 3A
 
-Status: Implemented.
+Status: Completed after mixed-interaction audit.
+
+## Mixed Interaction Completion
+
+Each generated question has an explicit `interactionMode` and mode-specific data; the React UI switches only on that field, never on prompt text. A normal session is now ten questions: six number-entry questions, one multiple-choice question, one three-pair matching activity, one visual group-selection activity, and one fraction-coloring activity. This makes conventional multiple choice 10% of a session and prevents adjacent multiple-choice questions by construction.
+
+`lib/lessons/interactions.ts` owns mode-neutral submitted-attempt evaluation. A correct first submission earns one star; an incorrect submission allows a retry but cannot earn that question's first-attempt star. Matching validates all pairs together, and fraction coloring validates the selected-section count, so selection changes before Check are not attempts.
+
+Fraction coloring carries `numerator`, denominator `2 | 3 | 4`, and `rectangle`, `circle`, or `chocolate-bar` model data. Sections are toggle buttons with labels that state part number and colored state. It deliberately validates a count rather than positions. Later fraction work may add contiguous-region rules only through an explicit question field.
+
+To add an interaction mode, add its discriminated question type in `lib/lessons/types.ts`, create deterministic generator data in `lib/lessons/questions.ts`, validate it in `validateQuestion`, add its evaluation rule to `lib/lessons/interactions.ts`, render it in `app/page.tsx`, and cover it in tests. All controls meet the existing 44px touch-target baseline, have visible keyboard focus, and fraction sections have meaningful accessible names. The matching UI currently uses selects rather than drawn connection lines; richer drag connections and more visual models are deferred.
 
 Milestone 3A prepares the app for more curriculum content by building a scalable local content engine. It should remain deterministic, local-first, and testable.
 

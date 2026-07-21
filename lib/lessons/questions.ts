@@ -1,9 +1,9 @@
 import { QUESTION_TEMPLATES, templatesForSkill } from "./curriculum";
 import { lessonById } from "./definitions";
-import type { DifficultyBand, LessonId, Question, QuestionHistory, QuestionTemplate, QuestionTemplateId, SkillId } from "./types";
+import type { DifficultyBand, LessonId, Question, QuestionBase, QuestionHistory, QuestionTemplate, QuestionTemplateId, SkillId } from "./types";
 
 type Random = () => number;
-type DraftQuestion = Omit<Question, "choices" | "id" | "questionKey" | "operandKeys"> & { operandKeys?: readonly string[] };
+type DraftQuestion = Omit<QuestionBase, "id" | "questionKey" | "operandKeys"> & { choiceLabels?: Readonly<Record<number, string>>; operandKeys?: readonly string[] };
 type GenerationOptions = { history?: QuestionHistory; maxRecentQuestions?: number; maxRecentOperands?: number };
 
 const MAX_GENERATION_ATTEMPTS = 80;
@@ -212,25 +212,23 @@ function choicesForQuestion(draft: DraftQuestion, random: Random): number[] {
 }
 
 export function validateQuestion(question: Question): boolean {
-  if (!question.id || !question.prompt.trim() || !question.hint.trim() || question.choices.length !== 4) return false;
-  if (new Set(question.choices).size !== 4) return false;
-  if (question.choices.filter((choice) => choice === question.correctAnswer).length !== 1) return false;
+  if (!question.id || !question.prompt.trim() || !question.hint.trim()) return false;
   if (question.prompt.includes("×") || question.prompt.includes("÷")) return false;
   if (question.kind === "subtraction" && question.correctAnswer < 0) return false;
   if (question.kind === "clock-reading" && (question.correctAnswer < 60 || question.correctAnswer > 12 * 60 + 45 || question.correctAnswer % 15 !== 0)) return false;
-  if (question.kind === "fraction" && question.templateId === "fraction-shaded") {
-    const numerator = Math.floor(question.correctAnswer / 100);
-    const denominator = question.correctAnswer % 100;
-    if (denominator < 2 || denominator > 4 || numerator < 1 || numerator >= denominator) return false;
+  if (question.interactionMode === "multiple-choice") {
+    if (question.choices.length !== 4 || new Set(question.choices).size !== 4 || question.choices.filter((choice) => choice === question.correctAnswer).length !== 1) return false;
+    if (question.choiceLabels && question.choices.some((choice) => !question.choiceLabels?.[choice])) return false;
   }
-  if (question.choiceLabels && question.choices.some((choice) => !question.choiceLabels?.[choice])) return false;
+  if (question.interactionMode === "matching" && (question.pairs.length < 3 || question.pairs.length > 4 || new Set(question.answerBank).size !== question.answerBank.length || !question.pairs.every((pair) => question.answerBank.includes(pair.answer)))) return false;
+  if (question.interactionMode === "visual-selection" && (!question.visualOptions.some((option) => option.id === question.correctOptionId) || question.visualOptions.length < 3)) return false;
+  if (question.interactionMode === "fraction-coloring" && (question.denominator < 2 || question.denominator > 4 || question.numerator < 1 || question.numerator >= question.denominator)) return false;
   return true;
 }
 
-function buildQuestion(draft: DraftQuestion, random: Random): Question {
-  const choices = choicesForQuestion(draft, random);
+function buildQuestion(draft: DraftQuestion): Question {
   const questionKey = `${draft.kind}:${draft.templateId}:${draft.difficulty}:${draft.prompt}:${draft.correctAnswer}`;
-  return { ...draft, id: questionKey, choices, questionKey, operandKeys: draft.operandKeys ?? [questionKey] };
+  return { ...draft, id: questionKey, questionKey, operandKeys: draft.operandKeys ?? [questionKey], interactionMode: "number-entry" };
 }
 
 function generationAllowed(question: Question, usedKeys: Set<string>, usedOperands: Set<string>, history: QuestionHistory, options: Required<Pick<GenerationOptions, "maxRecentQuestions" | "maxRecentOperands">>): boolean {
@@ -249,11 +247,28 @@ export function generateSkillQuestion(skillId: SkillId, difficulty: DifficultyBa
   const history = options.history ?? emptyQuestionHistory();
   for (let attempt = 0; attempt < MAX_GENERATION_ATTEMPTS; attempt += 1) {
     for (const template of templates) {
-      const question = buildQuestion(generateDraft(skillId, difficulty, template.id, random), random);
+      const base = buildQuestion(generateDraft(skillId, difficulty, template.id, random));
+      const question: Question = { ...base, interactionMode: "multiple-choice", choices: choicesForQuestion(base, random), ...(base.choiceLabels ? { choiceLabels: base.choiceLabels } : {}) };
       if (validateQuestion(question) && !history.recentQuestionKeys.includes(question.questionKey)) return question;
     }
   }
   throw new Error(`Could not generate valid ${skillId} question`);
+}
+
+function withInteraction(base: Question, mode: number, random: Random): Question {
+  if (mode < 6) return base;
+  if (mode === 6) return { ...base, interactionMode: "multiple-choice", choices: choicesForQuestion(base, random), ...(base.choiceLabels ? { choiceLabels: base.choiceLabels } : {}) };
+  if (mode === 7) {
+    const pairs = Array.from({ length: 3 }, (_, index) => ({ id: `pair-${index + 1}`, prompt: `${index + 2} + ${index + 3}`, answer: index + 5, label: String(index + 5) }));
+    return { ...base, interactionMode: "matching", prompt: "Match each sum to its answer.", pairs, answerBank: shuffled(pairs.map((pair) => pair.answer), random), correctAnswer: 3 };
+  }
+  if (mode === 8) {
+    const count = Math.max(3, Math.min(12, base.correctAnswer));
+    const options = shuffled([count - 1, count, count + 1].map((objectCount, index) => ({ id: `group-${index + 1}`, label: `A group of ${objectCount} acorns`, objectCount })), random);
+    return { ...base, interactionMode: "visual-selection", prompt: `Choose the group with ${count} acorns.`, visualOptions: options, correctOptionId: options.find((option) => option.objectCount === count)!.id, correctAnswer: count };
+  }
+  const denominator = pick([2, 3, 4] as const, random); const numerator = integer(1, denominator - 1, random);
+  return { ...base, kind: "fraction", templateId: "fraction-shaded", interactionMode: "fraction-coloring", prompt: `Color ${numerator}/${denominator} of the shape.`, numerator, denominator, model: pick(["rectangle", "circle", "chocolate-bar"] as const, random), correctAnswer: numerator, hint: "The bottom number tells us how many equal parts there are. The top number tells us how many parts to color." };
 }
 
 /** A stable seed makes a session replayable in tests while changing values between attempts. */
@@ -264,7 +279,6 @@ export function generateLessonQuestions(lessonId: LessonId, seed: string, option
   const strictOptions = { maxRecentQuestions: options.maxRecentQuestions ?? DEFAULT_RECENT_QUESTIONS, maxRecentOperands: options.maxRecentOperands ?? DEFAULT_RECENT_OPERANDS };
   const usedKeys = new Set<string>();
   const usedOperands = new Set<string>();
-  const positions = [...shuffled([0, 1, 2, 3], random), ...shuffled([0, 1, 2, 3], random)];
   const questions: Question[] = [];
   for (let index = 0; index < lesson.questionCount; index += 1) {
     const skillId = lesson.skillFocus[index % lesson.skillFocus.length]!;
@@ -273,21 +287,19 @@ export function generateLessonQuestions(lessonId: LessonId, seed: string, option
     let selected: Question | undefined;
     for (let attempt = 0; attempt < MAX_GENERATION_ATTEMPTS && !selected; attempt += 1) {
       const template = templates[attempt % templates.length] ?? templateById(templatesForSkill(skillId)[0]!.id);
-      const candidate = buildQuestion(generateDraft(skillId, difficulty, template.id, random), random);
+      const candidate = buildQuestion(generateDraft(skillId, difficulty, template.id, random));
       if (validateQuestion(candidate) && generationAllowed(candidate, usedKeys, usedOperands, history, strictOptions)) selected = candidate;
     }
     if (!selected) {
       for (let attempt = 0; attempt < MAX_GENERATION_ATTEMPTS && !selected; attempt += 1) {
         const template = templates[attempt % templates.length] ?? templateById(templatesForSkill(skillId)[0]!.id);
-        const candidate = buildQuestion(generateDraft(skillId, difficulty, template.id, random), random);
+        const candidate = buildQuestion(generateDraft(skillId, difficulty, template.id, random));
         if (validateQuestion(candidate) && !usedKeys.has(candidate.questionKey)) selected = candidate;
       }
     }
     if (!selected) throw new Error(`Could not generate valid ${skillId} question for ${lessonId}`);
     const question = selected;
-    const remaining = question.choices.filter((choice) => choice !== question.correctAnswer);
-    remaining.splice(positions[index]!, 0, question.correctAnswer);
-    const positioned = { ...question, choices: remaining };
+    const positioned = withInteraction(question, index, random);
     usedKeys.add(positioned.questionKey);
     positioned.operandKeys.forEach((key) => usedOperands.add(key));
     questions.push(positioned);
