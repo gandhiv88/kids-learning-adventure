@@ -1,2 +1,1 @@
-/** Local persistence adapters belong here. */
-export {};
+export { addSessionStars, loadProgress, saveCharacter } from "./progress";

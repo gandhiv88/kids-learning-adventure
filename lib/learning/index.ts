@@ -1,2 +1,2 @@
-/** Framework-independent learning domain logic belongs here. */
-export {};
+export { generateSessionQuestions, isCorrectAnswer } from "./questions";
+export { createSessionResult, recordAttempt } from "./scoring";
