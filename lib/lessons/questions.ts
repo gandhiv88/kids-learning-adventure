@@ -221,6 +221,18 @@ export function validateQuestion(question: Question): boolean {
     if (question.choiceLabels && question.choices.some((choice) => !question.choiceLabels?.[choice])) return false;
   }
   if (question.interactionMode === "matching" && (question.pairs.length < 3 || question.pairs.length > 4 || new Set(question.answerBank).size !== question.answerBank.length || !question.pairs.every((pair) => question.answerBank.includes(pair.answer)))) return false;
+  if (question.interactionMode === "matching") {
+    const pairIds = new Set(question.pairs.map((pair) => pair.id));
+    const requiredAnswers = new Set(question.pairs.map((pair) => pair.answer));
+    if (
+      pairIds.size !== question.pairs.length ||
+      question.pairs.some((pair) => !pair.id.trim() || !pair.prompt.trim() || !pair.label.trim()) ||
+      question.answerBank.length === 0 ||
+      requiredAnswers.size !== question.pairs.length ||
+      requiredAnswers.size !== question.answerBank.length ||
+      !question.answerBank.every((answer) => requiredAnswers.has(answer))
+    ) return false;
+  }
   if (question.interactionMode === "visual-selection" && (!question.visualOptions.some((option) => option.id === question.correctOptionId) || question.visualOptions.length < 3)) return false;
   if (question.interactionMode === "fraction-coloring" && (question.denominator < 2 || question.denominator > 4 || question.numerator < 1 || question.numerator >= question.denominator)) return false;
   return true;
@@ -259,7 +271,12 @@ function withInteraction(base: Question, mode: number, random: Random): Question
   if (mode < 6) return base;
   if (mode === 6) return { ...base, interactionMode: "multiple-choice", choices: choicesForQuestion(base, random), ...(base.choiceLabels ? { choiceLabels: base.choiceLabels } : {}) };
   if (mode === 7) {
-    const pairs = Array.from({ length: 3 }, (_, index) => ({ id: `pair-${index + 1}`, prompt: `${index + 2} + ${index + 3}`, answer: index + 5, label: String(index + 5) }));
+    const pairs = Array.from({ length: 3 }, (_, index) => {
+      const left = index + 2;
+      const right = index + 3;
+      const answer = left + right;
+      return { id: `pair-${index + 1}`, prompt: `${left} + ${right}`, answer, label: String(answer) };
+    });
     return { ...base, interactionMode: "matching", prompt: "Match each sum to its answer.", pairs, answerBank: shuffled(pairs.map((pair) => pair.answer), random), correctAnswer: 3 };
   }
   if (mode === 8) {
@@ -302,6 +319,7 @@ export function generateLessonQuestions(lessonId: LessonId, seed: string, option
     const positioned = withInteraction(question, index, random);
     usedKeys.add(positioned.questionKey);
     positioned.operandKeys.forEach((key) => usedOperands.add(key));
+    if (!validateQuestion(positioned)) throw new Error(`Generated an invalid ${positioned.interactionMode} question for ${lessonId}`);
     questions.push(positioned);
   }
   return questions;

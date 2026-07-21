@@ -74,7 +74,7 @@ Generated kinds include number bond, addition, subtraction, missing addend, skip
 
 The session composer intentionally fixes the interaction distribution rather than balancing answer positions across every question: number entry is the default, and the sole multiple-choice activity is never adjacent to another multiple-choice activity.
 
-Every generated question is validated before it is returned. Validation checks prompt and hint presence, mode-specific choice, pair, visual, and fraction data, non-negative subtraction, valid clock answers, valid fraction answers, and absence of multiplication or division symbols.
+Every generated question is validated before it is returned. Validation checks prompt and hint presence, mode-specific choice, pair, visual, and fraction data, non-negative subtraction, valid clock answers, valid fraction answers, and absence of multiplication or division symbols. Matching validation is deliberately strict: pair IDs and required answers must be unique, every pair prompt and label must be present, and the answer bank must contain exactly the complete set of required answers. The generator validates the final interaction-shaped question before returning it, so an invalid matching activity fails loudly rather than reaching the UI. The matching UI announces its selected-row count and labels a disabled Check button with the remaining number of choices, so a child can see why they cannot continue yet.
 
 Recent-question tracking is framework-independent. `QuestionHistory` stores recent question keys and operand keys. The generator avoids exact recent repeats and recent operand patterns where practical, then falls back only as needed so lessons remain generatable. History is capped so older material can return for spaced review.
 
@@ -124,6 +124,7 @@ Current tests focus on deterministic learning logic rather than browser renderin
 
 * `tests/lessons.test.ts` covers lesson definitions, unlocking, best-score star behavior, migration, generated question validity, and recent-repeat avoidance in lessons.
 * `tests/curriculum-engine.test.ts` covers Milestone 3A skill definitions, prerequisites, deterministic generation, variation, validation, difficulty bands, clocks, fractions, repeat history, and no multiplication/division.
+* `tests/interaction-regressions.test.ts` runs 1,000 deterministic seeds through multiple-choice and matching generation and rejects malformed matching fixtures, including omitted answers, duplicate IDs, duplicate values, empty prompts, and unmappable answer-bank entries.
 * `tests/question-generation.test.ts` covers retained Milestone 1 deterministic generation and answer validation.
 * `tests/progress.test.ts` covers retained Milestone 1 best-score persistence logic and migration.
 * `tests/scoring.test.ts` covers retained Milestone 1 scoring behavior.
