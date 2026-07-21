@@ -1,5 +1,8 @@
 export type CharacterId = "unicorn" | "robot" | "dragon";
 
+export type CompanionPose = "idle" | "thinking" | "cheering" | "encouraging" | "surprised";
+export type CompanionPlacement = "left" | "right" | "top-left" | "top-right" | "bottom-left" | "bottom-right";
+
 export type QuestionKind =
   | "addition"
   | "subtraction"

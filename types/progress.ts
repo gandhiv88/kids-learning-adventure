@@ -1,7 +1,9 @@
 import type { CharacterId } from "./learning";
 
 export type SavedProgress = {
-  version: 1;
+  version: 2;
   selectedCharacter: CharacterId;
-  totalStars: number;
+  totalAdventureStars: number;
+  lessonBestScores: Record<string, number>;
+  committedSessionIds: readonly string[];
 };
