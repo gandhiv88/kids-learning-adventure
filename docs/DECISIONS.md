@@ -64,13 +64,33 @@ Consequences: Arithmetic generation, validation, and tests live in the repositor
 
 ## 2026-07-21 - Recent Repeat Protection
 
-Status: Accepted for future implementation.
+Status: Accepted and implemented in Milestone 3A.
 
 Context: Procedural sessions need variety without permanently banning useful review.
 
 Decision: Exact recent questions should be avoided while allowing later spaced repetition.
 
-Consequences: Milestone 3A should add repeat protection metadata and tests. It should not remove spaced review.
+Consequences: Progress stores capped `questionHistory` with recent question keys and operand keys. The local generator avoids exact repeats and recent operands where practical, then lets older material return after the history window rolls off.
+
+## 2026-07-21 - Local Curriculum Templates
+
+Status: Accepted.
+
+Context: Fixed question lists do not provide enough variety for repeated local practice.
+
+Decision: Skills use reusable procedural templates with deterministic seeded generation, difficulty metadata, and validation.
+
+Consequences: Milestone 3A supports number bonds, addition, subtraction, missing addends, skip counting, place value, comparison, clocks, fractions, and word problems without external APIs.
+
+## 2026-07-21 - Prerequisite Metadata Before Adaptation
+
+Status: Accepted.
+
+Context: Future teaching and adaptive progression need to know conceptual dependencies, but Milestone 3A must not implement adaptive promotion.
+
+Decision: Skill definitions include prerequisites now, while progression remains the Milestone 2 completion-based lesson map.
+
+Consequences: Later milestones can consume prerequisite metadata for teaching mode and mastery progression without changing the question model again.
 
 ## 2026-07-21 - Skill-Based Mastery
 

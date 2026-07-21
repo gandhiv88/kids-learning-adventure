@@ -14,17 +14,17 @@ Delivered answer-position balancing, active companion behavior that preserves pr
 
 Delivered Number Forest, six ordered lessons, map-based lesson selection, sequential unlocking, version 3 progress storage, and tests for lessons, generation, migration, unlocking, and star behavior.
 
-## Current
-
 ### Milestone 3A: Scalable Local Content Engine
 
-Milestone 3A is the next implementation milestone. It should expand the local procedural content engine and metadata while keeping the app deterministic and local-first. It should not implement adaptive selection, mastery promotion, teaching mode, OpenAI API calls, databases, achievements, multiple new worlds, multiplication, or three- and four-digit arithmetic.
+Delivered a deterministic local curriculum engine with reusable templates, difficulty bands, expanded skill support, question validation, prerequisite metadata, capped recent-question history, and tests. The active app remains local-first and keeps the Milestone 2 Number Forest map.
 
-## Planned
+## Current
 
 ### Milestone 3B: Teaching, Guided Practice, Hints, And Mastery
 
-Add worked examples, guided practice, richer hints, independent practice, mastery checks, and skill-level mastery tracking.
+Milestone 3B is the next implementation milestone. It should add teaching and guided practice on top of the local engine, without introducing AI, a backend, or adaptive progression beyond the approved scope.
+
+## Planned
 
 ### Milestone 4: Adaptive Learning And Spaced Review
 

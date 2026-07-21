@@ -1,6 +1,6 @@
 # Architecture
 
-This document describes the actual repository as of Milestone 2 and separates implemented behavior from planned architecture.
+This document describes the actual repository as of Milestone 3A and separates implemented behavior from planned architecture.
 
 ## Current Stack
 
@@ -42,23 +42,41 @@ There are six ordered Number Forest lessons:
 5. `skip-counting-1`.
 6. `forest-challenge-1`.
 
-Each lesson belongs to `number-forest`, has eight questions, and declares one or more `skillFocus` values.
+Each lesson belongs to `number-forest`, has eight questions, declares one or more `skillFocus` values, and declares supported difficulty bands. Milestone 3A preserves the six-lesson map and uses the expanded generator behind those lessons.
 
-## Question Generation
+## Curriculum Engine
 
-Current Number Forest generation lives in `lib/lessons/questions.ts`.
+Curriculum metadata lives in `lib/lessons/curriculum.ts`.
 
-Generation is deterministic for a `(lessonId, seed)` pair. It uses a local seeded random function derived from the seed string and lesson id. Each generated question includes:
+It defines:
 
+* `SkillDefinition` records for number bonds, addition, subtraction, missing addends, skip counting, place value, number comparison, clock reading, fractions, and word problems.
+* `QuestionTemplate` records with reusable template IDs and estimated variety.
+* Prerequisite metadata for later teaching and adaptive milestones.
+* `review`, `core`, and `challenge` difficulty bands.
+
+Question generation lives in `lib/lessons/questions.ts`.
+
+Generation is deterministic for a `(lessonId, seed, history)` input. It uses a local seeded random function derived from the seed string and lesson id. Each generated question includes:
+
+* Stable id and question key.
 * `kind`.
+* `templateId`.
+* `difficulty`.
 * `prompt`.
-* Four numeric choices.
+* Four choices.
+* Optional display labels for choices such as clock times, comparison symbols, and fractions.
 * One `correctAnswer`.
 * A short `hint`.
+* Operand keys for repeat protection.
 
-Current generated kinds are number bond, addition, missing addend, subtraction, and skip counting. Subtraction generation avoids negative answers. The forest challenge cycles through its skill focuses.
+Generated kinds include number bond, addition, subtraction, missing addend, skip counting, place value, number comparison, clock reading, fraction, and word problem. Subtraction generation avoids negative answers. The forest challenge cycles through its skill focuses and now includes place value, comparison, and word-problem review.
 
 Correct-answer positions are balanced across each eight-question lesson by combining two shuffled permutations of positions 0 through 3. Tests assert that all four positions are used and that long same-position runs are avoided.
+
+Every generated question is validated before it is returned. Validation checks prompt and hint presence, four distinct choices, correct answer appearing once, non-negative subtraction, valid clock answers, valid fraction answers, and absence of multiplication or division symbols.
+
+Recent-question tracking is framework-independent. `QuestionHistory` stores recent question keys and operand keys. The generator avoids exact recent repeats and recent operand patterns where practical, then falls back only as needed so lessons remain generatable. History is capped so older material can return for spaced review.
 
 The repository also contains older Milestone 1 fixed-template generation in `lib/learning/questions.ts`. That module is no longer used by the active page but remains covered by tests.
 
@@ -75,19 +93,20 @@ Session stars and cumulative adventure stars are distinct:
 
 ## Persistence And Migration
 
-Current Number Forest persistence uses `lib/lessons/storage.ts` with the key `number-forest-progress`. The saved shape is version 3:
+Current Number Forest persistence uses `lib/lessons/storage.ts` with the key `number-forest-progress`. The saved shape is version 4:
 
 * `version`.
 * `selectedCharacter`.
 * `totalAdventureStars`.
 * `lessonProgress`, keyed by lesson id.
+* `questionHistory`.
 
 Each lesson progress record stores:
 
 * `bestScore`.
 * `completed`.
 
-`migrateProgress` in `lib/lessons/progress.ts` normalizes malformed values, clamps scores, preserves valid companions, preserves non-negative total stars, and maps legacy Milestone 1 best score fields into `number-bonds-1` when no `lessonProgress` exists.
+`migrateProgress` in `lib/lessons/progress.ts` normalizes malformed values, clamps scores, preserves valid companions, preserves non-negative total stars, preserves valid recent-question history, and maps legacy Milestone 1 best score fields into `number-bonds-1` when no `lessonProgress` exists.
 
 Older Milestone 1 persistence remains in `lib/persistence/progress.ts` using key `kids-learning-adventure.progress.v1` and a version 2 shape. It is not used by the active route.
 
@@ -103,7 +122,8 @@ The recommended lesson is the first unlocked incomplete lesson. After all lesson
 
 Current tests focus on deterministic learning logic rather than browser rendering:
 
-* `tests/lessons.test.ts` covers Milestone 2 lesson definitions, unlocking, best-score star behavior, migration, and generated question validity.
+* `tests/lessons.test.ts` covers lesson definitions, unlocking, best-score star behavior, migration, generated question validity, and recent-repeat avoidance in lessons.
+* `tests/curriculum-engine.test.ts` covers Milestone 3A skill definitions, prerequisites, deterministic generation, variation, validation, difficulty bands, clocks, fractions, repeat history, and no multiplication/division.
 * `tests/question-generation.test.ts` covers retained Milestone 1 deterministic generation and answer validation.
 * `tests/progress.test.ts` covers retained Milestone 1 best-score persistence logic and migration.
 * `tests/scoring.test.ts` covers retained Milestone 1 scoring behavior.
@@ -113,9 +133,8 @@ Required validation commands are `npm run lint`, `npm run typecheck`, `npm run t
 
 ## Planned Future Architecture
 
-Future work should move toward clearer separation:
+Future work should move toward:
 
-* A deterministic local curriculum engine for skill definitions, prerequisites, question generation, repeat protection, and validation.
 * A teaching and mastery engine for worked examples, guided practice, hints, mastery checks, and adaptive recommendations.
 * An optional server-side OpenAI enhancement layer for content enrichment after local systems are proven.
 * Server-side validation and storage if API-generated content or remote persistence is introduced.

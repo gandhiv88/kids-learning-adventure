@@ -1,7 +1,8 @@
 import { LESSONS } from "./definitions";
-import type { CharacterId, LessonId, LessonProgress, SavedProgress } from "./types";
+import type { CharacterId, LessonId, LessonProgress, QuestionHistory, SavedProgress } from "./types";
 
-export const emptyProgress = (): SavedProgress => ({ version: 3, selectedCharacter: "moss", totalAdventureStars: 0, lessonProgress: {} });
+export const emptyQuestionHistory = (): QuestionHistory => ({ recentQuestionKeys: [], recentOperandKeys: [] });
+export const emptyProgress = (): SavedProgress => ({ version: 4, selectedCharacter: "moss", totalAdventureStars: 0, lessonProgress: {}, questionHistory: emptyQuestionHistory() });
 export const clampScore = (score: unknown): number => Math.max(0, Math.min(8, Number.isFinite(score) ? Math.floor(Number(score)) : 0));
 export const isCharacter = (value: unknown): value is CharacterId => value === "moss" || value === "luna" || value === "ember";
 export const normalizedLessonProgress = (value: unknown): LessonProgress | undefined => {
@@ -9,6 +10,12 @@ export const normalizedLessonProgress = (value: unknown): LessonProgress | undef
   const item = value as { bestScore?: unknown; completed?: unknown };
   const bestScore = clampScore(item.bestScore);
   return { bestScore, completed: item.completed === true };
+};
+export const normalizedQuestionHistory = (value: unknown): QuestionHistory => {
+  if (!value || typeof value !== "object") return emptyQuestionHistory();
+  const item = value as { recentQuestionKeys?: unknown; recentOperandKeys?: unknown };
+  const stringsOnly = (input: unknown): string[] => Array.isArray(input) ? input.filter((entry): entry is string => typeof entry === "string").slice(-48) : [];
+  return { recentQuestionKeys: stringsOnly(item.recentQuestionKeys), recentOperandKeys: stringsOnly(item.recentOperandKeys) };
 };
 
 export function normalizeProgress(value: unknown): SavedProgress {
@@ -21,7 +28,7 @@ export function normalizeProgress(value: unknown): SavedProgress {
     const item = normalizedLessonProgress(rawLessons[lesson.id]);
     if (item) lessonProgress[lesson.id] = item;
   }
-  return { version: 3, selectedCharacter: isCharacter(raw.selectedCharacter) ? raw.selectedCharacter : fallback.selectedCharacter, totalAdventureStars: Math.max(0, Number.isFinite(raw.totalAdventureStars) ? Math.floor(Number(raw.totalAdventureStars)) : 0), lessonProgress };
+  return { version: 4, selectedCharacter: isCharacter(raw.selectedCharacter) ? raw.selectedCharacter : fallback.selectedCharacter, totalAdventureStars: Math.max(0, Number.isFinite(raw.totalAdventureStars) ? Math.floor(Number(raw.totalAdventureStars)) : 0), lessonProgress, questionHistory: normalizedQuestionHistory(raw.questionHistory) };
 }
 
 /** Accepts legacy M1 shapes as well as v3 records. */

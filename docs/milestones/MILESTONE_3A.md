@@ -1,8 +1,23 @@
 # Milestone 3A
 
-Status: Approved scope, not implemented.
+Status: Implemented.
 
 Milestone 3A prepares the app for more curriculum content by building a scalable local content engine. It should remain deterministic, local-first, and testable.
+
+## Implemented Summary
+
+Milestone 3A adds:
+
+* Skill metadata for number bonds, addition, subtraction, missing addends, skip counting, place value, number comparison, clock reading, fractions, and word problems.
+* Reusable procedural question templates with estimated variety counts.
+* `review`, `core`, and `challenge` difficulty bands.
+* Deterministic seeded lesson and skill generation.
+* Programmatic validation for generated questions.
+* Capped framework-independent recent-question and recent-operand history.
+* Prerequisite definitions for future teaching and adaptive milestones.
+* Local progress migration to version 4 with `questionHistory`.
+
+The active Number Forest app still uses the six Milestone 2 lessons and completion-based unlocking. Milestone 3A does not add adaptive progression or teaching mode.
 
 ## Approved Scope
 

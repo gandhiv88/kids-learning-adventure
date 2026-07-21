@@ -2,12 +2,12 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 import { LESSONS } from "../lib/lessons/definitions";
 import { commitLessonResult, emptyProgress, lessonIsUnlocked, migrateProgress, recommendedLessonId, unlockedLessonIds } from "../lib/lessons/progress";
-import { generateLessonQuestions } from "../lib/lessons/questions";
+import { generateLessonQuestions, rememberQuestions, validateQuestion } from "../lib/lessons/questions";
 
 test("six ordered lessons have the required eight questions and focuses", () => {
   assert.equal(LESSONS.length, 6); assert.equal(new Set(LESSONS.map((lesson) => lesson.id)).size, 6);
   assert.deepEqual(LESSONS.map((lesson) => lesson.order), [1, 2, 3, 4, 5, 6]);
-  assert.ok(LESSONS.every((lesson) => lesson.questionCount === 8 && lesson.skillFocus.length > 0));
+  assert.ok(LESSONS.every((lesson) => lesson.questionCount === 8 && lesson.skillFocus.length > 0 && lesson.difficultyBands.length > 0));
   assert.deepEqual(LESSONS.map((lesson) => lesson.skillFocus[0]), ["number-bond", "addition", "missing-addend", "subtraction", "skip-counting", "number-bond"]);
 });
 
@@ -32,7 +32,7 @@ test("best scores only add their improvement and results cannot reduce progress"
 
 test("migration preserves character, stars, and safely maps legacy best score", () => {
   const migrated = migrateProgress({ version: 2, selectedCharacter: "luna", totalAdventureStars: 12, bestScore: 6, completed: true });
-  assert.equal(migrated.version, 3); assert.equal(migrated.selectedCharacter, "luna"); assert.equal(migrated.totalAdventureStars, 12);
+  assert.equal(migrated.version, 4); assert.equal(migrated.selectedCharacter, "luna"); assert.equal(migrated.totalAdventureStars, 12);
   assert.deepEqual(migrated.lessonProgress["number-bonds-1"], { bestScore: 6, completed: true });
   const malformed = migrateProgress({ selectedCharacter: "nope", totalAdventureStars: -4, lessonProgress: { "addition-1": { bestScore: 90, completed: "yes" } } });
   assert.equal(malformed.selectedCharacter, "moss"); assert.equal(malformed.totalAdventureStars, 8); assert.deepEqual(malformed.lessonProgress["addition-1"], { bestScore: 8, completed: false });
@@ -42,6 +42,7 @@ test("seeded questions are reproducible, varied, valid, and lesson-specific", ()
   for (const lesson of LESSONS) {
     const first = generateLessonQuestions(lesson.id, "acorn"); const again = generateLessonQuestions(lesson.id, "acorn");
     assert.deepEqual(first, again); assert.equal(first.length, 8); assert.ok(first.every((question) => lesson.skillFocus.includes(question.kind)));
+    assert.ok(first.every(validateQuestion));
     assert.ok(first.every((question) => question.choices.length === 4 && new Set(question.choices).size === 4 && question.choices.filter((choice) => choice === question.correctAnswer).length === 1));
     assert.ok(first.every((question) => question.kind !== "subtraction" || question.correctAnswer >= 0));
     const positions = first.map((question) => question.choices.indexOf(question.correctAnswer));
@@ -49,4 +50,11 @@ test("seeded questions are reproducible, varied, valid, and lesson-specific", ()
     assert.ok(positions.every((position, index) => index < 2 || !(positions[index - 2] === position && positions[index - 1] === position)));
     assert.notDeepEqual(first, generateLessonQuestions(lesson.id, "pinecone"));
   }
+});
+
+test("recent history avoids exact repeats across nearby lesson attempts", () => {
+  const first = generateLessonQuestions("addition-1", "repeat-seed");
+  const history = rememberQuestions(emptyProgress().questionHistory, first);
+  const second = generateLessonQuestions("addition-1", "repeat-seed", { history });
+  assert.equal(first.some((question) => second.some((next) => next.questionKey === question.questionKey)), false);
 });

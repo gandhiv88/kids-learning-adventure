@@ -6,16 +6,22 @@ Mastery should be tracked per skill rather than assigning a general intelligence
 
 ## Current Implemented Skills
 
-The current Number Forest implementation includes six ordered lessons covering:
+The current Number Forest map includes six ordered lessons. Milestone 3A keeps those themes and expands the local procedural curriculum engine.
+
+The local engine now supports:
 
 * Number bonds.
 * Addition.
+* Subtraction.
 * Missing addends.
-* Subtraction with non-negative answers.
-* Skip counting by 2, 5, and 10.
-* Mixed review of those skills.
+* Skip counting.
+* Place value.
+* Number comparison.
+* Analog clock reading.
+* Basic fractions.
+* Simple one-step word problems.
 
-The active app does not currently implement place value, number comparison, clock reading, fractions, word problems, teaching mode, mastery tracking, or adaptive review.
+The active app does not currently implement teaching mode, mastery tracking, or adaptive review. Clock and fraction generation exist in the local engine for future taught lessons, but Milestone 3A does not promote them through adaptive assessment.
 
 ## Near-Term And Planned Skills
 
@@ -31,6 +37,12 @@ Planned curriculum areas include:
 * Analog clock reading.
 * Basic fractions.
 * Simple word problems.
+
+Each skill has `review`, `core`, and `challenge` difficulty metadata. Examples:
+
+* Addition review stays within 20, core reaches within 100, and challenge prepares two-digit work without full regrouping.
+* Clock review uses whole hours, core adds half hours, and challenge adds quarter hours.
+* Fraction review uses halves, core adds fourths, and challenge adds thirds and comparison.
 
 ## Learning Sequence For New Concepts
 
