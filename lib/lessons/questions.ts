@@ -221,6 +221,18 @@ export function validateQuestion(question: Question): boolean {
     if (question.choiceLabels && question.choices.some((choice) => !question.choiceLabels?.[choice])) return false;
   }
   if (question.interactionMode === "matching" && (question.pairs.length < 3 || question.pairs.length > 4 || new Set(question.answerBank).size !== question.answerBank.length || !question.pairs.every((pair) => question.answerBank.includes(pair.answer)))) return false;
+  if (question.interactionMode === "matching") {
+    const pairIds = new Set(question.pairs.map((pair) => pair.id));
+    const requiredAnswers = new Set(question.pairs.map((pair) => pair.answer));
+    if (
+      pairIds.size !== question.pairs.length ||
+      question.pairs.some((pair) => !pair.id.trim() || !pair.prompt.trim() || !pair.label.trim()) ||
+      question.answerBank.length === 0 ||
+      requiredAnswers.size !== question.pairs.length ||
+      requiredAnswers.size !== question.answerBank.length ||
+      !question.answerBank.every((answer) => requiredAnswers.has(answer))
+    ) return false;
+  }
   if (question.interactionMode === "visual-selection" && (!question.visualOptions.some((option) => option.id === question.correctOptionId) || question.visualOptions.length < 3)) return false;
   if (question.interactionMode === "fraction-coloring" && (question.denominator < 2 || question.denominator > 4 || question.numerator < 1 || question.numerator >= question.denominator)) return false;
   return true;
@@ -302,6 +314,7 @@ export function generateLessonQuestions(lessonId: LessonId, seed: string, option
     const positioned = withInteraction(question, index, random);
     usedKeys.add(positioned.questionKey);
     positioned.operandKeys.forEach((key) => usedOperands.add(key));
+    if (!validateQuestion(positioned)) throw new Error(`Generated an invalid ${positioned.interactionMode} question for ${lessonId}`);
     questions.push(positioned);
   }
   return questions;
