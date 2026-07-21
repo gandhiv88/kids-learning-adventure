@@ -1,4 +1,43 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Kids Learning Adventure — Milestone 2
+
+Number Forest is a touch-friendly, local-first maths journey for one child. Choose Moss, Luna, or Ember, then travel through six short lessons. There are no accounts, ads, APIs, timers, or penalties.
+
+## User flow
+
+Welcome → choose or keep a companion → Number Forest map → select an unlocked eight-question lesson → see results → return to the map. Returning learners see their selected companion and adventure-star total, but no lesson starts automatically.
+
+## Lessons
+
+1. Number Bond Garden — part-whole number bonds
+2. Addition Trail — addition
+3. Mystery Number Grove — missing addends
+4. Subtraction Cave — non-negative subtraction
+5. Skip-Counting Bridge — 2s, 5s, and 10s
+6. Forest Star Challenge — mixed review
+
+Lesson 1 starts unlocked. Completing all eight questions unlocks the next lesson even when no first-try answers are correct. Replaying never relocks a path. Each lesson stores its best score; only an improved score adds the difference to the cumulative adventure-star total.
+
+## Persistence
+
+Progress is stored in `localStorage` as version 3. Older records are safely normalized, preserve a valid companion and cumulative stars, and map a legacy Milestone 1 best score to Number Bond Garden. Missing, malformed, or unavailable browser storage falls back safely to an in-memory new adventure.
+
+## Development
+
+```bash
+npm run dev
+npm run lint
+npm run typecheck
+npm run test
+npm run build
+```
+
+## Manual checklist
+
+- New and returning user flows; companion changes preserve progress.
+- Locked nodes cannot be activated; completing a lesson reveals the next node.
+- Replay lower/equal/improved scores and confirm stars only increase by improvements.
+- Check map, lesson, and results in iPad portrait/landscape and narrow mobile widths.
+- Enable reduced motion and confirm transitions are removed.
 
 ## Getting Started
 
