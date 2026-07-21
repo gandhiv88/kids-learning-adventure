@@ -134,9 +134,12 @@ Before modifying code:
 ## Git rules
 
 * Never work directly on `main` for a feature.
+* Before starting a feature branch, switch to `main` and pull the latest `origin/main`.
 * Create one feature branch per task.
 * Keep one clear purpose per pull request.
-* Do not merge pull requests.
+* Always create a pull request for feature work.
+* Merge the pull request to `main` only after the PR checks and review requirements are satisfied.
+* After the pull request has been merged, delete the feature branch.
 * Do not force-push.
 * Do not modify unrelated files.
 
