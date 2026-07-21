@@ -24,8 +24,16 @@ test("matching activities remain solvable and retain every required answer acros
     assert.equal(new Set(question.answerBank).size, question.answerBank.length);
     assert.equal(new Set(question.pairs.map((pair) => pair.id)).size, question.pairs.length);
     assert.equal(new Set(question.pairs.map((pair) => pair.answer)).size, question.pairs.length);
+    assert.deepEqual(new Set(question.answerBank), new Set(question.pairs.map((pair) => pair.answer)), "the answer bank must be exactly the required answers");
     for (const pair of question.pairs) assert.ok(question.answerBank.includes(pair.answer), `${pair.prompt} must have ${pair.answer}`);
   }
+});
+
+test("the displayed matching sums keep their arithmetic answers in the answer bank", () => {
+  const question = generateLessonQuestions("number-bonds-1", "visible-matching")[7]!;
+  assert.equal(question.interactionMode, "matching");
+  assert.deepEqual(question.pairs.map((pair) => [pair.prompt, pair.answer]), [["2 + 3", 5], ["3 + 4", 7], ["4 + 5", 9]]);
+  assert.deepEqual(new Set(question.answerBank), new Set([5, 7, 9]));
 });
 
 const matchingFixture = (overrides: Partial<MatchingQuestion>): MatchingQuestion => ({

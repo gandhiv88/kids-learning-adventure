@@ -271,7 +271,12 @@ function withInteraction(base: Question, mode: number, random: Random): Question
   if (mode < 6) return base;
   if (mode === 6) return { ...base, interactionMode: "multiple-choice", choices: choicesForQuestion(base, random), ...(base.choiceLabels ? { choiceLabels: base.choiceLabels } : {}) };
   if (mode === 7) {
-    const pairs = Array.from({ length: 3 }, (_, index) => ({ id: `pair-${index + 1}`, prompt: `${index + 2} + ${index + 3}`, answer: index + 5, label: String(index + 5) }));
+    const pairs = Array.from({ length: 3 }, (_, index) => {
+      const left = index + 2;
+      const right = index + 3;
+      const answer = left + right;
+      return { id: `pair-${index + 1}`, prompt: `${left} + ${right}`, answer, label: String(answer) };
+    });
     return { ...base, interactionMode: "matching", prompt: "Match each sum to its answer.", pairs, answerBank: shuffled(pairs.map((pair) => pair.answer), random), correctAnswer: 3 };
   }
   if (mode === 8) {
