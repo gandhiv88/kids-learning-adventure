@@ -6,7 +6,7 @@ Mastery should be tracked per skill rather than assigning a general intelligence
 
 ## Current Implemented Skills
 
-The current Number Forest map includes six ordered lessons. Milestone 3A keeps those themes and expands the local procedural curriculum engine.
+The current math adventure includes ordered lesson groups. Number Forest keeps the original arithmetic path, and Milestone 3B adds real-world groups for money, time, fractions, measurement, graphs, place value, and short word problems.
 
 The local engine now supports:
 
@@ -17,11 +17,27 @@ The local engine now supports:
 * Skip counting.
 * Place value.
 * Number comparison.
-* Analog clock reading.
-* Basic fractions.
+* Money.
+* Time.
+* Visual fractions.
+* Measurement.
+* Graphs.
 * Simple one-step word problems.
 
-The active app does not currently implement teaching mode, mastery tracking, or adaptive review. Clock and fraction generation exist in the local engine for future taught lessons, but Milestone 3A does not promote them through adaptive assessment.
+The active app does not currently implement mastery tracking, adaptive review, or an entire world map. Lessons are grouped so later world-map work can consume the same definitions.
+
+## Real-World Math
+
+Milestone 3B adds these lesson groups:
+
+* Number Forest: number bonds, addition, missing addends, subtraction, skip counting, place value, comparison, and word problems.
+* Market Town: identify coins, count coins, compare amounts, simple shopping, simple change, and making exact amounts.
+* Clock Tower: analog clocks, digital times, matching times, before/after, and simple elapsed time.
+* Fraction Kitchen: halves, thirds, and quarters using pizza, chocolate bar, fruit, and shape models.
+* Measurement Meadow: longer/shorter, heavier/lighter, taller/shorter, capacity, and simple ruler reading.
+* Graph Garden: picture graphs and bar charts.
+
+Money uses a configurable currency model. The current configuration ships US denominations, but lesson logic depends on denomination configuration rather than React components or hardcoded prompts.
 
 ## Near-Term And Planned Skills
 
@@ -34,8 +50,11 @@ Planned curriculum areas include:
 * Skip counting.
 * Place value.
 * Number comparison.
-* Analog clock reading.
-* Basic fractions.
+* Money.
+* Time.
+* Visual fractions.
+* Measurement.
+* Graphs.
 * Simple word problems.
 
 Each skill has `review`, `core`, and `challenge` difficulty metadata. Examples:

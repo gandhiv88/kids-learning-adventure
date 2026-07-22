@@ -1,17 +1,21 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
-import { LESSONS } from "../lib/lessons/definitions";
+import { LESSON_GROUPS, LESSONS } from "../lib/lessons/definitions";
 import { generateLessonQuestions, validateQuestion } from "../lib/lessons/questions";
 import { commitLessonResult, emptyProgress } from "../lib/lessons/progress";
 
-test("ten-question sessions have an intentional mixed interaction distribution", () => {
+test("ten-question sessions use valid skill-aware interactions", () => {
   for (const lesson of LESSONS) {
     const questions = generateLessonQuestions(lesson.id, "acorn");
     assert.equal(questions.length, 10);
-    assert.deepEqual(questions.map((question) => question.interactionMode), ["number-entry", "number-entry", "number-entry", "number-entry", "number-entry", "number-entry", "multiple-choice", "matching", "visual-selection", "fraction-coloring"]);
     assert.ok(questions.every(validateQuestion));
-    assert.equal(questions.filter((question) => question.interactionMode === "multiple-choice").length, 1);
+    assert.ok(questions.every((question) => lesson.skillFocus.includes(question.kind)));
+    assert.ok(questions.every((question) => question.explanation.length > 0 && question.encouragement.length > 0));
   }
+});
+test("real-world lesson groups are registered for future worlds", () => {
+  assert.deepEqual(LESSON_GROUPS.map((group) => group.id), ["number-forest", "market-town", "clock-tower", "fraction-kitchen", "measurement-meadow", "graph-garden"]);
+  for (const group of LESSON_GROUPS) assert.ok(LESSONS.some((lesson) => lesson.worldId === group.id), `${group.id} needs a lesson`);
 });
 test("sessions are deterministic and allow a skill in multiple suitable interactions", () => {
   const first = generateLessonQuestions("addition-1", "seed");

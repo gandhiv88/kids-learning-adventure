@@ -124,6 +124,8 @@ Before modifying code:
 * Preserve separation between domain logic, persistence, and React UI.
 * Use deterministic seeded question generation.
 * Keep generated questions programmatically validated.
+* Keep lesson groups, lesson registration, interaction choices, hints, explanations, and encouragement in the lesson engine rather than hardcoding lesson behavior in React components.
+* Keep money lessons based on a configurable currency model; do not hardcode one country's currency into the UI or validation logic.
 * Maintain accessibility and iPad Safari support.
 * Run lint, typecheck, tests, and the production build before reporting completion.
 * Do not reset learning progress when changing companions.

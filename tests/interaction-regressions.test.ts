@@ -38,7 +38,7 @@ test("the displayed matching sums keep their arithmetic answers in the answer ba
 
 const matchingFixture = (overrides: Partial<MatchingQuestion>): MatchingQuestion => ({
   id: "matching-fixture", questionKey: "matching-fixture", operandKeys: ["matching-fixture"], kind: "addition", templateId: "addition-sum", difficulty: "review", prompt: "Match each sum.", correctAnswer: 3, hint: "Try again.", interactionMode: "matching",
-  pairs: [{ id: "one", prompt: "1 + 1", answer: 2, label: "2" }, { id: "two", prompt: "1 + 2", answer: 3, label: "3" }, { id: "three", prompt: "2 + 2", answer: 4, label: "4" }], answerBank: [2, 3, 4], ...overrides,
+  explanation: "Each sum has one answer.", encouragement: ["Nice matching."], pairs: [{ id: "one", prompt: "1 + 1", answer: 2, label: "2" }, { id: "two", prompt: "1 + 2", answer: 3, label: "3" }, { id: "three", prompt: "2 + 2", answer: 4, label: "4" }], answerBank: [2, 3, 4], ...overrides,
 });
 
 test("matching validation rejects malformed or impossible activities", () => {
