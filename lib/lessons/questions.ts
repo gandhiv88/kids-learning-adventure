@@ -46,6 +46,13 @@ const timeLabel = (value: number): string => {
   const minute = value % 60;
   return `${hour}:${String(minute).padStart(2, "0")}`;
 };
+const addMinutesOnClock = (hour: number, minute: number, delta: number): { hour: number; minute: number } => {
+  const clockMinutes = 12 * 60;
+  const zeroBased = (hour % 12) * 60 + minute;
+  const next = (zeroBased + delta + clockMinutes) % clockMinutes;
+  const nextHour = Math.floor(next / 60);
+  return { hour: nextHour === 0 ? 12 : nextHour, minute: next % 60 };
+};
 const US_CURRENCY = {
   code: "USD",
   symbol: "$",
@@ -183,9 +190,7 @@ function generateTime(templateId: QuestionTemplateId, difficulty: DifficultyBand
   const minute = pick(minuteOptions, random);
   if (templateId === "time-elapsed" || templateId === "time-before-after") {
     const delta = templateId === "time-before-after" && random() < 0.5 ? -30 : 30;
-    const absolute = hour * 60 + minute + delta;
-    const nextHour = ((Math.floor((absolute - 1) / 60) % 12) + 12) % 12 + 1;
-    const nextMinute = ((absolute % 60) + 60) % 60;
+    const { hour: nextHour, minute: nextMinute } = addMinutesOnClock(hour, minute, delta);
     return { kind: "time", templateId, difficulty, prompt: `It is ${timeLabel(timeAnswer(hour, minute))}. What time is ${Math.abs(delta)} minutes ${delta > 0 ? "later" : "before"}?`, correctAnswer: timeAnswer(nextHour, nextMinute), choiceLabels: clockLabels(timeAnswer(nextHour, nextMinute), random), hint: "Half an hour is 30 minutes.", visual: { type: "clock", hour, minute }, explanation: `${Math.abs(delta)} minutes is half an hour.`, operandKeys: [operandKey("time", [hour, minute, delta])] };
   }
   const answer = timeAnswer(hour, minute);
@@ -313,7 +318,12 @@ export function validateQuestion(question: Question): boolean {
       !question.answerBank.every((answer) => requiredAnswers.has(answer))
     ) return false;
   }
-  if (question.interactionMode === "visual-selection" && (!question.visualOptions.some((option) => option.id === question.correctOptionId) || question.visualOptions.length < 3)) return false;
+  if (question.interactionMode === "visual-selection") {
+    const optionIds = new Set(question.visualOptions.map((option) => option.id));
+    const correctOptions = question.visualOptions.filter((option) => option.objectCount === question.correctAnswer);
+    const selectedOption = question.visualOptions.find((option) => option.id === question.correctOptionId);
+    if (question.visualOptions.length < 3 || optionIds.size !== question.visualOptions.length || correctOptions.length !== 1 || selectedOption?.objectCount !== question.correctAnswer) return false;
+  }
   if (question.interactionMode === "fraction-coloring" && (question.denominator < 2 || question.denominator > 4 || question.numerator < 1 || question.numerator >= question.denominator)) return false;
   if (question.interactionMode === "sequence-completion" && (question.sequence.length < 3 || question.missingIndex < 0 || question.missingIndex >= question.sequence.length || question.sequence[question.missingIndex] !== question.correctAnswer)) return false;
   return true;

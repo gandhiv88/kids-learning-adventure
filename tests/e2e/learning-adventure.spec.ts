@@ -20,6 +20,21 @@ function completedProgressThrough(lessonId: LessonId) {
   };
 }
 
+function unlockedProgressFor(lessonId: LessonId) {
+  const lessonIndex = LESSONS.findIndex((lesson) => lesson.id === lessonId);
+  if (lessonIndex < 0) throw new Error(`Unknown lesson ${lessonId}`);
+  if (lessonIndex === 0) {
+    return {
+      version: 4,
+      selectedCharacter: "moss",
+      totalAdventureStars: 0,
+      lessonProgress: {},
+      questionHistory: { recentQuestionKeys: [], recentOperandKeys: [] },
+    };
+  }
+  return completedProgressThrough(LESSONS[lessonIndex - 1]!.id);
+}
+
 async function clearProgress(page: Page) {
   await page.addInitScript((key) => window.localStorage.removeItem(key), STORAGE_KEY);
 }
@@ -85,10 +100,71 @@ test("new learner can choose a companion and complete the first lesson", async (
   await expect(page.getByText("You grew your best score by 10 stars!")).toBeVisible();
 });
 
+test("multiple-choice retry requires choosing a different answer", async ({ page }) => {
+  const seed = "e2e-choice-retry";
+  const questions = generateLessonQuestions("addition-1", seed);
+  const choiceIndex = questions.findIndex((question) => question.interactionMode === "multiple-choice");
+  if (choiceIndex < 0) throw new Error("Expected addition lesson to include a multiple-choice question");
+
+  await seedProgress(page, completedProgressThrough("number-bonds-1"));
+  await page.goto(`/?testSeed=${seed}`);
+  await page.getByRole("button", { name: "Enter Math Adventure" }).click();
+  await page.getByRole("button", { name: /2\. Addition Trail/ }).click();
+
+  for (let index = 0; index < choiceIndex; index += 1) {
+    await answerQuestion(page, questions[index]!);
+    await page.getByRole("button", { name: "Next question" }).click();
+  }
+
+  const question = questions[choiceIndex]!;
+  if (question.interactionMode !== "multiple-choice") throw new Error("Expected multiple-choice question");
+  const wrongChoice = question.choices.find((choice) => choice !== question.correctAnswer);
+  if (wrongChoice === undefined) throw new Error("Expected a wrong choice");
+
+  await page.locator(`[data-choice-id="choice-${wrongChoice}"]`).click();
+  await page.getByRole("button", { name: "Check" }).click();
+  await expect(page.getByRole("button", { name: "Check" })).toBeDisabled();
+  await page.locator(`[data-choice-id="choice-${question.correctAnswer}"]`).click();
+  await expect(page.getByRole("button", { name: "Check" })).toBeEnabled();
+});
+
+test("character switching preserves stars and lesson progress after refresh", async ({ page }) => {
+  await seedProgress(page, completedProgressThrough("number-bonds-1"));
+  await page.goto("/?testSeed=e2e-character");
+  await page.getByRole("button", { name: "Enter Math Adventure" }).click();
+
+  await expect(page.getByText("⭐ 10")).toBeVisible();
+  await page.getByRole("button", { name: "Change companion" }).click();
+  await page.getByRole("button", { name: /Ember/ }).click();
+  await expect(page.getByRole("button", { name: /1\. Bond Garden/ })).toContainText("Best: 10/10 stars");
+  await expect(page.getByText("⭐ 10")).toBeVisible();
+
+  await page.reload();
+  await page.getByRole("button", { name: "Enter Math Adventure" }).click();
+  await expect(page.getByRole("button", { name: /1\. Bond Garden/ })).toContainText("Best: 10/10 stars");
+  await expect(page.getByText("⭐ 10")).toBeVisible();
+});
+
+test("malformed older saved progress is normalized without crashing", async ({ page }) => {
+  await seedProgress(page, {
+    version: 1,
+    selectedCharacter: "not-a-companion",
+    totalAdventureStars: -20,
+    lessonProgress: { "number-bonds-1": { bestScore: 99, completed: true }, "ghost-lesson": { bestScore: 5, completed: true } },
+    questionHistory: { recentQuestionKeys: ["ok", 7], recentOperandKeys: [false, "operand"] },
+  });
+
+  await page.goto("/?testSeed=e2e-malformed");
+  await expect(page.getByRole("heading", { name: "Ready for a little math adventure?" })).toBeVisible();
+  await page.getByRole("button", { name: "Enter Math Adventure" }).click();
+  await expect(page.getByRole("button", { name: /1\. Bond Garden/ })).toContainText("Best: 10/10 stars");
+  await expect(page.getByRole("button", { name: /2\. Addition Trail/ })).toBeEnabled();
+});
+
 test("grouped map exposes real-world lessons and locks future lessons", async ({ page }) => {
   await seedProgress(page, completedProgressThrough("forest-challenge-1"));
   await page.goto("/?testSeed=e2e-map");
-  await page.getByRole("button", { name: "Enter Number Forest" }).click();
+  await page.getByRole("button", { name: "Enter Math Adventure" }).click();
 
   await expect(page.getByText("Market Town")).toBeVisible();
   await expect(page.getByText("Clock Tower")).toBeVisible();
@@ -102,7 +178,7 @@ test("grouped map exposes real-world lessons and locks future lessons", async ({
 test("unlocked money lesson can be completed with deterministic real-world questions", async ({ page }) => {
   await seedProgress(page, completedProgressThrough("forest-challenge-1"));
   await page.goto("/?testSeed=e2e-money");
-  await page.getByRole("button", { name: "Enter Number Forest" }).click();
+  await page.getByRole("button", { name: "Enter Math Adventure" }).click();
   await page.getByRole("button", { name: /7\. Market Money/ }).click();
 
   await expect(page.getByText("Market Money")).toBeVisible();
@@ -111,3 +187,19 @@ test("unlocked money lesson can be completed with deterministic real-world quest
   await expect(page.getByRole("heading", { name: "Market Money" })).toBeVisible();
   await expect(page.getByText("⭐ 10 / 10")).toBeVisible();
 });
+
+for (const lessonId of ["time-1", "fractions-1", "measurement-1", "graphs-1", "place-value-1", "word-problems-1"] as const) {
+  test(`${lessonId} can be completed through the browser UI`, async ({ page }) => {
+    const seed = `e2e-${lessonId}`;
+    const lesson = LESSONS.find((item) => item.id === lessonId)!;
+    await seedProgress(page, unlockedProgressFor(lessonId));
+    await page.goto(`/?testSeed=${seed}`);
+    await page.getByRole("button", { name: "Enter Math Adventure" }).click();
+    await page.getByRole("button", { name: new RegExp(`${lesson.order}\\. ${lesson.shortTitle}`) }).click();
+
+    await completeLesson(page, lessonId, seed);
+
+    await expect(page.getByRole("heading", { name: lesson.title })).toBeVisible();
+    await expect(page.getByText("⭐ 10 / 10")).toBeVisible();
+  });
+}

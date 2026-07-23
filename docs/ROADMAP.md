@@ -22,6 +22,10 @@ Delivered a deterministic local curriculum engine with reusable templates, diffi
 
 Delivered grouped real-world math lessons for money, time, visual fractions, measurement, graphs, place value, and short word problems. Reused the interaction engine for number entry, multiple choice, matching, visual selection, sequence completion, and fraction coloring. Added structured visuals, context-aware encouragement, explanations, lesson group registration, and a configurable first currency model.
 
+### Milestone 3C: Bug Fixes, Stability, And Polish
+
+Delivered a stabilization pass for Milestone 3B. Fixed 12-hour time arithmetic around 12 o'clock, strengthened visual-selection validation, improved multiple-choice retry state, updated grouped-adventure copy, expanded browser e2e coverage across persistence and every real-world lesson group, and documented completed fixes in `BUGS.md`.
+
 ## Current
 
 ### Milestone 4: Adaptive Learning And Spaced Review

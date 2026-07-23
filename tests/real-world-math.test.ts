@@ -22,6 +22,20 @@ test("time questions validate analog and digital answers on allowed minute marks
   }
 });
 
+test("time before and after questions keep 12 o'clock in the 12 hour", () => {
+  let reproduced = false;
+  for (let seed = 0; seed < 5_000; seed += 1) {
+    const question = generateSkillQuestion("time", "core", `around-12-${seed}`);
+    if (question.prompt === "It is 12:00. What time is 30 minutes later?") {
+      reproduced = true;
+      assert.equal(question.correctAnswer, 12 * 60 + 30);
+      assert.equal(question.choiceLabels?.[question.correctAnswer], "12:30");
+      break;
+    }
+  }
+  assert.equal(reproduced, true, "expected seeded generation to reproduce a 12:00 plus 30 minutes question");
+});
+
 test("fractions stay visual for halves thirds and quarters", () => {
   const questions = generateLessonQuestions("fractions-1", "kitchen");
   assert.ok(questions.every(validateQuestion));
