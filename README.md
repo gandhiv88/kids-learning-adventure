@@ -71,10 +71,13 @@ npm run dev
 npm run lint
 npm run typecheck
 npm run test
+npm run test:e2e
 npm run build
 ```
 
 Open [http://localhost:3000](http://localhost:3000) after starting the development server.
+
+`npm run test:e2e` runs Playwright browser tests against the Next dev server. The suite uses deterministic lesson seeds so it can complete lessons through the same UI a child uses. Install Playwright browsers with `npx playwright install` if the local machine has not downloaded them yet.
 
 ## Manual Checklist
 

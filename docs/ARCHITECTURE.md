@@ -11,6 +11,7 @@ The app uses:
 * TypeScript with strict checking.
 * Tailwind CSS v4 import plus custom CSS in `app/globals.css`.
 * Vitest for domain logic tests.
+* Playwright for browser e2e tests.
 * Browser `localStorage` for local-first progress.
 
 The active route is `app/page.tsx`. It is a client component because it reads browser storage and manages the lesson flow in local state.
@@ -150,12 +151,13 @@ Current tests focus on deterministic learning logic rather than browser renderin
 * `tests/curriculum-engine.test.ts` covers skill definitions, prerequisites, deterministic generation, variation, validation, difficulty bands, repeat history, and no multiplication/division.
 * `tests/interaction-regressions.test.ts` runs 1,000 deterministic seeds through multiple-choice and matching generation and rejects malformed matching fixtures, including omitted answers, duplicate IDs, duplicate values, empty prompts, and unmappable answer-bank entries.
 * `tests/real-world-math.test.ts` covers Milestone 3B money calculations, time validation, fraction visuals, measurement logic, graph interpretation, word problems, and registered lesson generation.
+* `tests/e2e/learning-adventure.spec.ts` uses Playwright to run the app in a browser, select a companion, complete deterministic lessons through the UI, and verify grouped real-world lesson unlocking.
 * `tests/question-generation.test.ts` covers retained Milestone 1 deterministic generation and answer validation.
 * `tests/progress.test.ts` covers retained Milestone 1 best-score persistence logic and migration.
 * `tests/scoring.test.ts` covers retained Milestone 1 scoring behavior.
 * `tests/companion.test.ts` covers retained Milestone 1 companion state behavior.
 
-Required validation commands are `npm run lint`, `npm run typecheck`, `npm run test`, and `npm run build`.
+Required validation commands are `npm run lint`, `npm run typecheck`, `npm run test`, `npm run test:e2e`, and `npm run build`.
 
 ## Planned Future Architecture
 
