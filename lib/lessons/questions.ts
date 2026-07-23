@@ -1,9 +1,9 @@
 import { QUESTION_TEMPLATES, templatesForSkill } from "./curriculum";
 import { lessonById } from "./definitions";
-import type { DifficultyBand, LessonId, Question, QuestionBase, QuestionHistory, QuestionTemplate, QuestionTemplateId, SkillId } from "./types";
+import type { DifficultyBand, LessonId, MoneyVisual, Question, QuestionBase, QuestionHistory, QuestionTemplate, QuestionTemplateId, SkillId } from "./types";
 
 type Random = () => number;
-type DraftQuestion = Omit<QuestionBase, "id" | "questionKey" | "operandKeys"> & { choiceLabels?: Readonly<Record<number, string>>; operandKeys?: readonly string[] };
+type DraftQuestion = Omit<QuestionBase, "id" | "questionKey" | "operandKeys" | "explanation" | "encouragement"> & { choiceLabels?: Readonly<Record<number, string>>; operandKeys?: readonly string[]; explanation?: string; encouragement?: readonly string[] };
 type GenerationOptions = { history?: QuestionHistory; maxRecentQuestions?: number; maxRecentOperands?: number };
 
 const MAX_GENERATION_ATTEMPTS = 80;
@@ -45,6 +45,38 @@ const timeLabel = (value: number): string => {
   const hour = Math.floor(value / 60);
   const minute = value % 60;
   return `${hour}:${String(minute).padStart(2, "0")}`;
+};
+const addMinutesOnClock = (hour: number, minute: number, delta: number): { hour: number; minute: number } => {
+  const clockMinutes = 12 * 60;
+  const zeroBased = (hour % 12) * 60 + minute;
+  const next = (zeroBased + delta + clockMinutes) % clockMinutes;
+  const nextHour = Math.floor(next / 60);
+  return { hour: nextHour === 0 ? 12 : nextHour, minute: next % 60 };
+};
+const US_CURRENCY = {
+  code: "USD",
+  symbol: "$",
+  minorUnitSymbol: "¢",
+  minorUnitsPerMajor: 100,
+  denominations: [
+    { id: "penny", label: "penny", value: 1 },
+    { id: "nickel", label: "nickel", value: 5 },
+    { id: "dime", label: "dime", value: 10 },
+    { id: "quarter", label: "quarter", value: 25 },
+  ],
+} as const;
+
+const moneyLabel = (minorUnits: number): string => minorUnits >= US_CURRENCY.minorUnitsPerMajor && minorUnits % US_CURRENCY.minorUnitsPerMajor === 0 ? `${US_CURRENCY.symbol}${minorUnits / US_CURRENCY.minorUnitsPerMajor}` : `${minorUnits}${US_CURRENCY.minorUnitSymbol}`;
+const coinVisual = (coinIds: readonly string[]): MoneyVisual => ({ type: "money", currencyCode: US_CURRENCY.code, coins: coinIds });
+const encouragementFor = (kind: SkillId): readonly string[] => {
+  if (kind === "money") return ["You counted those coins perfectly!", "That was smart market math!", "You made exact money."];
+  if (kind === "time") return ["You read that clock like a pro!", "Great clock thinking!", "You found the time."];
+  if (kind === "fraction") return ["Pizza math is delicious!", "You spotted the equal parts!", "Nice fraction thinking."];
+  if (kind === "measurement") return ["You compared carefully!", "Great measuring!", "You used the picture well."];
+  if (kind === "graph") return ["You read that graph clearly!", "Great data detective work!", "You found it on the chart."];
+  if (kind === "place-value") return ["Those tens and ones made sense!", "Great base-ten thinking!", "You built the number."];
+  if (kind === "word-problem") return ["You solved the story!", "Great real-world thinking!", "You found what changed."];
+  return ["Wonderful thinking!", "Nice math work!", "You figured it out."];
 };
 
 function answerChoices(answer: number, random: Random, options?: { min?: number; max?: number; candidates?: readonly number[] }): number[] {
@@ -110,9 +142,9 @@ function generatePlaceValue(templateId: QuestionTemplateId, difficulty: Difficul
   const tens = integer(difficulty === "review" ? 1 : 2, difficulty === "challenge" ? 9 : 7, random);
   const ones = integer(0, 9, random);
   const value = tens * 10 + ones;
-  if (templateId === "place-value-expanded") return { kind: "place-value", templateId, difficulty, prompt: `${tens} tens and ${ones} ones make ?`, correctAnswer: value, hint: "Tens count by 10. Ones count by 1.", operandKeys: [operandKey("place-value", [tens, ones])] };
+  if (templateId === "place-value-expanded") return { kind: "place-value", templateId, difficulty, prompt: `${tens} tens and ${ones} ones make ?`, correctAnswer: value, hint: "Tens count by 10. Ones count by 1.", visual: { type: "base-ten", tens, ones }, explanation: `${tens} tens are ${tens * 10}. Add ${ones} ones to make ${value}.`, operandKeys: [operandKey("place-value", [tens, ones])] };
   const askTens = random() < 0.5;
-  return { kind: "place-value", templateId, difficulty, prompt: `In ${value}, what is the ${askTens ? "tens" : "ones"} digit?`, correctAnswer: askTens ? tens : ones, hint: "Look at the place where the digit sits.", operandKeys: [operandKey("place-value", [value, askTens ? "tens" : "ones"])] };
+  return { kind: "place-value", templateId, difficulty, prompt: `In ${value}, what is the ${askTens ? "tens" : "ones"} digit?`, correctAnswer: askTens ? tens : ones, hint: "Look at the place where the digit sits.", visual: { type: "base-ten", tens, ones }, explanation: `${value} has ${tens} tens and ${ones} ones.`, operandKeys: [operandKey("place-value", [value, askTens ? "tens" : "ones"])] };
 }
 
 function generateComparison(templateId: QuestionTemplateId, difficulty: DifficultyBand, random: Random): DraftQuestion {
@@ -127,17 +159,42 @@ function generateComparison(templateId: QuestionTemplateId, difficulty: Difficul
   return { kind: "number-comparison", templateId, difficulty, prompt, correctAnswer: answer, choiceLabels: labels, hint: "Point to the bigger number first.", operandKeys: [operandKey("number-comparison", [left, right])] };
 }
 
-function generateClock(templateId: QuestionTemplateId, difficulty: DifficultyBand, random: Random): DraftQuestion {
+function generateMoney(templateId: QuestionTemplateId, difficulty: DifficultyBand, random: Random): DraftQuestion {
+  const denominations = US_CURRENCY.denominations;
+  if (templateId === "money-identify-coin") {
+    const coin = pick(denominations, random);
+    return { kind: "money", templateId, difficulty, prompt: `What is this coin worth?`, correctAnswer: coin.value, choiceLabels: Object.fromEntries(denominations.map((item) => [item.value, moneyLabel(item.value)])), hint: `A ${coin.label} is worth ${moneyLabel(coin.value)}.`, visual: coinVisual([coin.id]), explanation: `A ${coin.label} has a value of ${moneyLabel(coin.value)}.`, operandKeys: [operandKey("money", [templateId, coin.id])] };
+  }
+  if (templateId === "money-shopping-left" || templateId === "money-simple-change") {
+    const price = templateId === "money-shopping-left" ? integer(2, difficulty === "review" ? 7 : 15, random) * 100 : pick([25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75], random);
+    const paid = templateId === "money-shopping-left" ? price + integer(1, 8, random) * 100 : pick([100, 125, 150, 200], random);
+    const object = pick(["apple", "book", "snack", "kite"], random);
+    return { kind: "money", templateId, difficulty, prompt: `Buy a ${object} for ${moneyLabel(price)}. You have ${moneyLabel(paid)}. How much is left?`, correctAnswer: paid - price, hint: "Subtract the price from the money you have.", explanation: `${moneyLabel(paid)} - ${moneyLabel(price)} = ${moneyLabel(paid - price)}.`, operandKeys: [operandKey("money", [templateId, price, paid, object])] };
+  }
+  const coinIds = Array.from({ length: difficulty === "review" ? 3 : 4 }, () => pick(denominations, random).id);
+  const total = coinIds.reduce((sum, id) => sum + denominations.find((coin) => coin.id === id)!.value, 0);
+  if (templateId === "money-compare-amounts") {
+    const otherTotal = Math.max(1, total + pick([-15, -10, -5, 5, 10, 15, 25], random));
+    const answer = total === otherTotal ? 1 : total > otherTotal ? 2 : 0;
+    return { kind: "money", templateId, difficulty, prompt: `Which amount is greater: the coins or ${moneyLabel(otherTotal)}?`, correctAnswer: answer, choiceLabels: { 0: moneyLabel(otherTotal), 1: "same", 2: "coins", 3: "not sure" }, hint: "Count the coins, then compare the totals.", visual: coinVisual(coinIds), explanation: `The coins make ${moneyLabel(total)}. Compare that with ${moneyLabel(otherTotal)}.`, operandKeys: [operandKey("money", [templateId, total, otherTotal, ...coinIds])] };
+  }
+  if (templateId === "money-exact-amount") {
+    return { kind: "money", templateId, difficulty, prompt: `Choose the coins that make ${moneyLabel(total)}.`, correctAnswer: total, hint: "Add the coin values until they match the amount.", visual: coinVisual(coinIds), explanation: `These coins add to ${moneyLabel(total)}.`, operandKeys: [operandKey("money", [templateId, total, ...coinIds])] };
+  }
+  return { kind: "money", templateId, difficulty, prompt: "Count these coins.", correctAnswer: total, hint: "Add each coin value.", visual: coinVisual(coinIds), explanation: `The coins add to ${moneyLabel(total)}.`, operandKeys: [operandKey("money", [templateId, total, ...coinIds])] };
+}
+
+function generateTime(templateId: QuestionTemplateId, difficulty: DifficultyBand, random: Random): DraftQuestion {
   const minuteOptions = difficulty === "review" ? [0] : difficulty === "core" ? [0, 30] : [0, 15, 30, 45];
   const hour = integer(1, 12, random);
   const minute = pick(minuteOptions, random);
-  if (templateId === "clock-elapsed") {
-    const nextMinute = (minute + 30) % 60;
-    const nextHour = minute + 30 >= 60 ? (hour % 12) + 1 : hour;
-    return { kind: "clock-reading", templateId, difficulty, prompt: `It is ${timeLabel(timeAnswer(hour, minute))}. What time is 30 minutes later?`, correctAnswer: timeAnswer(nextHour, nextMinute), choiceLabels: clockLabels(timeAnswer(nextHour, nextMinute), random), hint: "Half an hour is 30 minutes.", operandKeys: [operandKey("clock-reading", [hour, minute, "plus30"])] };
+  if (templateId === "time-elapsed" || templateId === "time-before-after") {
+    const delta = templateId === "time-before-after" && random() < 0.5 ? -30 : 30;
+    const { hour: nextHour, minute: nextMinute } = addMinutesOnClock(hour, minute, delta);
+    return { kind: "time", templateId, difficulty, prompt: `It is ${timeLabel(timeAnswer(hour, minute))}. What time is ${Math.abs(delta)} minutes ${delta > 0 ? "later" : "before"}?`, correctAnswer: timeAnswer(nextHour, nextMinute), choiceLabels: clockLabels(timeAnswer(nextHour, nextMinute), random), hint: "Half an hour is 30 minutes.", visual: { type: "clock", hour, minute }, explanation: `${Math.abs(delta)} minutes is half an hour.`, operandKeys: [operandKey("time", [hour, minute, delta])] };
   }
   const answer = timeAnswer(hour, minute);
-  return { kind: "clock-reading", templateId, difficulty, prompt: `What time does the clock show? ${clockFace(hour, minute)}`, correctAnswer: answer, choiceLabels: clockLabels(answer, random), hint: minute === 0 ? "The minute hand points to 12 for a whole hour." : "Use the minute hand first, then the hour hand.", operandKeys: [operandKey("clock-reading", [hour, minute])] };
+  return { kind: "time", templateId, difficulty, prompt: templateId === "time-digital-read" ? `Which clock matches ${timeLabel(answer)}?` : "What time does the clock show?", correctAnswer: answer, choiceLabels: clockLabels(answer, random), hint: minute === 0 ? "The minute hand points to 12 for a whole hour." : "Use the minute hand first, then the hour hand.", visual: { type: "clock", hour, minute }, explanation: `The clock shows ${timeLabel(answer)}.`, operandKeys: [operandKey("time", [hour, minute, templateId])] };
 }
 
 function clockLabels(answer: number, random: Random): Readonly<Record<number, string>> {
@@ -147,30 +204,51 @@ function clockLabels(answer: number, random: Random): Readonly<Record<number, st
   return Object.fromEntries(choices.map((choice) => [choice, timeLabel(choice)]));
 }
 
-function clockFace(hour: number, minute: number): string {
-  const names: Record<number, string> = { 0: "minute hand at 12", 15: "minute hand at 3", 30: "minute hand at 6", 45: "minute hand at 9" };
-  return `(${names[minute] ?? "minute hand on the clock"}, hour hand near ${hour})`;
-}
-
 function generateFraction(templateId: QuestionTemplateId, difficulty: DifficultyBand, random: Random): DraftQuestion {
   const denominators = difficulty === "review" ? [2] : difficulty === "core" ? [2, 4] : [2, 3, 4];
   const denominator = pick(denominators, random);
   const numerator = integer(1, denominator - 1, random);
-  if (templateId === "fraction-compare") {
-    const otherNumerator = integer(1, denominator - 1, random);
-    const answer = numerator === otherNumerator ? 1 : numerator > otherNumerator ? 2 : 0;
-    return { kind: "fraction", templateId, difficulty, prompt: `Compare ${fractionLabel(numerator, denominator)} and ${fractionLabel(otherNumerator, denominator)}.`, correctAnswer: answer, choiceLabels: { 0: "<", 1: "=", 2: ">", 3: "not sure" }, hint: "Same-sized parts are easier to compare.", operandKeys: [operandKey("fraction", [numerator, denominator, otherNumerator])] };
-  }
   const answer = encodeAnswer(numerator, denominator);
   const labels = fractionLabels(answer, denominators, random);
-  const shape = pick(["circle", "rectangle", "square", "hexagon", "garden bed", "paper strip"], random);
-  return { kind: "fraction", templateId, difficulty, prompt: `A ${shape} has ${denominator} equal parts and ${numerator} shaded. What fraction is shaded?`, correctAnswer: answer, choiceLabels: labels, hint: "The bottom number is all equal parts. The top number is shaded parts.", operandKeys: [operandKey("fraction", [numerator, denominator, shape])] };
+  const model = pick(["pizza", "chocolate-bar", "fruit", "shape"] as const, random);
+  return { kind: "fraction", templateId, difficulty, prompt: `Which ${model} picture shows ${fractionLabel(numerator, denominator)}?`, correctAnswer: answer, choiceLabels: labels, visual: { type: "fraction", numerator, denominator: denominator as 2 | 3 | 4, model }, hint: "Count equal parts first. Then count shaded parts.", explanation: `${fractionLabel(numerator, denominator)} means ${numerator} of ${denominator} equal parts.`, operandKeys: [operandKey("fraction", [numerator, denominator, model])] };
 }
 
 function fractionLabels(answer: number, denominators: readonly number[], random: Random): Readonly<Record<number, string>> {
   const candidates = denominators.flatMap((denominator) => Array.from({ length: denominator - 1 }, (_, index) => encodeAnswer(index + 1, denominator)));
   const choices = answerChoices(answer, random, { min: 102, max: 904, candidates });
   return Object.fromEntries(choices.map((choice) => [choice, fractionLabel(Math.floor(choice / 100), choice % 100)]));
+}
+
+function generateMeasurement(templateId: QuestionTemplateId, difficulty: DifficultyBand, random: Random): DraftQuestion {
+  if (templateId === "measurement-ruler") {
+    const length = integer(2, difficulty === "review" ? 8 : 12, random);
+    return { kind: "measurement", templateId, difficulty, prompt: "How many ruler marks long is the ribbon?", correctAnswer: length, hint: "Start at zero and count to the end of the ribbon.", visual: { type: "measurement", unit: "marks", items: [{ label: "ribbon", size: length, icon: "━" }] }, explanation: `The ribbon ends at ${length}.`, operandKeys: [operandKey("measurement", [templateId, length])] };
+  }
+  const itemSets = {
+    "measurement-compare-length": { prompt: "Which object is longer?", labels: ["pencil", "crayon", "marker"], icon: "━" },
+    "measurement-compare-weight": { prompt: "Which object is heavier?", labels: ["melon", "apple", "grape"], icon: "●" },
+    "measurement-compare-height": { prompt: "Which object is taller?", labels: ["tower", "block stack", "cup"], icon: "▮" },
+    "measurement-capacity": { prompt: "Which container holds more?", labels: ["jug", "cup", "bottle"], icon: "▰" },
+  } as const;
+  const set = itemSets[templateId as keyof typeof itemSets] ?? itemSets["measurement-compare-length"];
+  const sizes = shuffled([integer(3, 5, random), integer(6, 8, random), integer(9, 12, random)], random);
+  const items = set.labels.map((label, index) => ({ label, size: sizes[index]!, icon: set.icon }));
+  const winner = items.reduce((best, item) => item.size > best.size ? item : best, items[0]!);
+  return { kind: "measurement", templateId, difficulty, prompt: set.prompt, correctAnswer: winner.size, hint: "Compare the pictures side by side.", visual: { type: "measurement", items }, explanation: `The ${winner.label} is the greatest size.`, operandKeys: [operandKey("measurement", [templateId, ...sizes])] };
+}
+
+function generateGraph(templateId: QuestionTemplateId, difficulty: DifficultyBand, random: Random): DraftQuestion {
+  const labels = shuffled(["apples", "bananas", "berries", "oranges"], random).slice(0, 3);
+  const icons: Record<string, string> = { apples: "A", bananas: "B", berries: "R", oranges: "O" };
+  const counts = shuffled([integer(2, 5, random), integer(6, 8, random), integer(9, difficulty === "review" ? 10 : 14, random)], random);
+  const entries = labels.map((label, index) => ({ label, count: counts[index]!, icon: icons[label] ?? label[0]!.toUpperCase() }));
+  if (templateId === "graph-most") {
+    const winner = entries.reduce((best, entry) => entry.count > best.count ? entry : best, entries[0]!);
+    return { kind: "graph", templateId, difficulty, prompt: "Which fruit is most popular?", correctAnswer: winner.count, hint: "Look for the longest row.", visual: { type: "graph", title: "Favorite Fruit", entries }, explanation: `${winner.label} has the most votes.`, operandKeys: [operandKey("graph", [templateId, ...counts])] };
+  }
+  const entry = pick(entries, random);
+  return { kind: "graph", templateId, difficulty, prompt: `How many children chose ${entry.label}?`, correctAnswer: entry.count, hint: "Find the row, then count the pictures or bar length.", visual: { type: "graph", title: "Favorite Fruit", entries }, explanation: `${entry.label} has ${entry.count} votes.`, operandKeys: [operandKey("graph", [templateId, entry.label, entry.count, ...counts])] };
 }
 
 function generateWordProblem(templateId: QuestionTemplateId, difficulty: DifficultyBand, random: Random): DraftQuestion {
@@ -201,8 +279,11 @@ function generateDraft(skillId: SkillId, difficulty: DifficultyBand, templateId:
   if (skillId === "skip-counting") return generateSkipCounting(templateId, difficulty, random);
   if (skillId === "place-value") return generatePlaceValue(templateId, difficulty, random);
   if (skillId === "number-comparison") return generateComparison(templateId, difficulty, random);
-  if (skillId === "clock-reading") return generateClock(templateId, difficulty, random);
+  if (skillId === "money") return generateMoney(templateId, difficulty, random);
+  if (skillId === "time") return generateTime(templateId, difficulty, random);
   if (skillId === "fraction") return generateFraction(templateId, difficulty, random);
+  if (skillId === "measurement") return generateMeasurement(templateId, difficulty, random);
+  if (skillId === "graph") return generateGraph(templateId, difficulty, random);
   return generateWordProblem(templateId, difficulty, random);
 }
 
@@ -213,9 +294,13 @@ function choicesForQuestion(draft: DraftQuestion, random: Random): number[] {
 
 export function validateQuestion(question: Question): boolean {
   if (!question.id || !question.prompt.trim() || !question.hint.trim()) return false;
+  if (typeof question.explanation !== "string" || !question.explanation.trim() || !Array.isArray(question.encouragement) || question.encouragement.length === 0) return false;
   if (question.prompt.includes("×") || question.prompt.includes("÷")) return false;
   if (question.kind === "subtraction" && question.correctAnswer < 0) return false;
-  if (question.kind === "clock-reading" && (question.correctAnswer < 60 || question.correctAnswer > 12 * 60 + 45 || question.correctAnswer % 15 !== 0)) return false;
+  if (question.kind === "time" && (question.correctAnswer < 60 || question.correctAnswer > 12 * 60 + 45 || question.correctAnswer % 15 !== 0)) return false;
+  if (question.kind === "money" && (question.correctAnswer < 0 || question.visual?.type === "money" && question.visual.currencyCode.length !== 3)) return false;
+  if (question.visual?.type === "fraction" && (question.visual.denominator < 2 || question.visual.denominator > 4 || question.visual.numerator < 1 || question.visual.numerator >= question.visual.denominator)) return false;
+  if (question.visual?.type === "graph" && question.visual.entries.length < 2) return false;
   if (question.interactionMode === "multiple-choice") {
     if (question.choices.length !== 4 || new Set(question.choices).size !== 4 || question.choices.filter((choice) => choice === question.correctAnswer).length !== 1) return false;
     if (question.choiceLabels && question.choices.some((choice) => !question.choiceLabels?.[choice])) return false;
@@ -233,14 +318,20 @@ export function validateQuestion(question: Question): boolean {
       !question.answerBank.every((answer) => requiredAnswers.has(answer))
     ) return false;
   }
-  if (question.interactionMode === "visual-selection" && (!question.visualOptions.some((option) => option.id === question.correctOptionId) || question.visualOptions.length < 3)) return false;
+  if (question.interactionMode === "visual-selection") {
+    const optionIds = new Set(question.visualOptions.map((option) => option.id));
+    const correctOptions = question.visualOptions.filter((option) => option.objectCount === question.correctAnswer);
+    const selectedOption = question.visualOptions.find((option) => option.id === question.correctOptionId);
+    if (question.visualOptions.length < 3 || optionIds.size !== question.visualOptions.length || correctOptions.length !== 1 || selectedOption?.objectCount !== question.correctAnswer) return false;
+  }
   if (question.interactionMode === "fraction-coloring" && (question.denominator < 2 || question.denominator > 4 || question.numerator < 1 || question.numerator >= question.denominator)) return false;
+  if (question.interactionMode === "sequence-completion" && (question.sequence.length < 3 || question.missingIndex < 0 || question.missingIndex >= question.sequence.length || question.sequence[question.missingIndex] !== question.correctAnswer)) return false;
   return true;
 }
 
 function buildQuestion(draft: DraftQuestion): Question {
   const questionKey = `${draft.kind}:${draft.templateId}:${draft.difficulty}:${draft.prompt}:${draft.correctAnswer}`;
-  return { ...draft, id: questionKey, questionKey, operandKeys: draft.operandKeys ?? [questionKey], interactionMode: "number-entry" };
+  return { ...draft, id: questionKey, questionKey, operandKeys: draft.operandKeys ?? [questionKey], explanation: draft.explanation ?? "Use the clue and check the parts carefully.", encouragement: draft.encouragement ?? encouragementFor(draft.kind), interactionMode: "number-entry" };
 }
 
 function generationAllowed(question: Question, usedKeys: Set<string>, usedOperands: Set<string>, history: QuestionHistory, options: Required<Pick<GenerationOptions, "maxRecentQuestions" | "maxRecentOperands">>): boolean {
@@ -267,25 +358,64 @@ export function generateSkillQuestion(skillId: SkillId, difficulty: DifficultyBa
   throw new Error(`Could not generate valid ${skillId} question`);
 }
 
-function withInteraction(base: Question, mode: number, random: Random): Question {
-  if (mode < 6) return base;
-  if (mode === 6) return { ...base, interactionMode: "multiple-choice", choices: choicesForQuestion(base, random), ...(base.choiceLabels ? { choiceLabels: base.choiceLabels } : {}) };
-  if (mode === 7) {
-    const pairs = Array.from({ length: 3 }, (_, index) => {
-      const left = index + 2;
-      const right = index + 3;
-      const answer = left + right;
-      return { id: `pair-${index + 1}`, prompt: `${left} + ${right}`, answer, label: String(answer) };
-    });
-    return { ...base, interactionMode: "matching", prompt: "Match each sum to its answer.", pairs, answerBank: shuffled(pairs.map((pair) => pair.answer), random), correctAnswer: 3 };
+function matchingFromSamples(base: Question, random: Random): Question {
+  const pairs = Array.from({ length: 3 }, (_, index) => {
+    const left = index + 2;
+    const right = index + 3;
+    const answer = left + right;
+    return { id: `pair-${index + 1}`, prompt: `${left} + ${right}`, answer, label: String(answer) };
+  });
+  return { ...base, interactionMode: "matching", prompt: "Match each sum to its answer.", pairs, answerBank: shuffled(pairs.map((pair) => pair.answer), random), correctAnswer: 3 };
+}
+
+function visualSelectionFromBase(base: Question, random: Random): Question {
+  if (base.visual?.type === "measurement") {
+    const options = shuffled(base.visual.items.map((item, index) => ({ id: `item-${index + 1}`, label: item.label, objectCount: item.size })), random);
+    return { ...base, interactionMode: "visual-selection", visualOptions: options, correctOptionId: options.find((option) => option.objectCount === base.correctAnswer)!.id };
   }
-  if (mode === 8) {
-    const count = Math.max(3, Math.min(12, base.correctAnswer));
-    const options = shuffled([count - 1, count, count + 1].map((objectCount, index) => ({ id: `group-${index + 1}`, label: `A group of ${objectCount} acorns`, objectCount })), random);
-    return { ...base, interactionMode: "visual-selection", prompt: `Choose the group with ${count} acorns.`, visualOptions: options, correctOptionId: options.find((option) => option.objectCount === count)!.id, correctAnswer: count };
+  if (base.visual?.type === "graph") {
+    const options = shuffled(base.visual.entries.map((entry, index) => ({ id: `entry-${index + 1}`, label: entry.label, objectCount: entry.count })), random);
+    return { ...base, interactionMode: "visual-selection", visualOptions: options, correctOptionId: options.find((option) => option.objectCount === base.correctAnswer)!.id };
   }
-  const denominator = pick([2, 3, 4] as const, random); const numerator = integer(1, denominator - 1, random);
-  return { ...base, kind: "fraction", templateId: "fraction-shaded", interactionMode: "fraction-coloring", prompt: `Color ${numerator}/${denominator} of the shape.`, numerator, denominator, model: pick(["rectangle", "circle", "chocolate-bar"] as const, random), correctAnswer: numerator, hint: "The bottom number tells us how many equal parts there are. The top number tells us how many parts to color." };
+  if (base.visual?.type === "fraction") {
+    const denominatorOptions = [2, 3, 4];
+    const values = shuffled(Object.entries(fractionLabels(base.correctAnswer, denominatorOptions, random)).map(([value, label]) => [Number(value), label] as const), random);
+    const options = values.map(([objectCount, label], index) => ({ id: `fraction-${index + 1}`, label, objectCount }));
+    return { ...base, interactionMode: "visual-selection", visualOptions: options, correctOptionId: options.find((option) => option.objectCount === base.correctAnswer)!.id };
+  }
+  const correct = base.correctAnswer;
+  const values = shuffled([Math.max(0, correct - 1), correct, correct + 1], random);
+  const labelFor = (value: number): string => base.kind === "money" ? moneyLabel(value) : String(value);
+  const options = values.map((objectCount, index) => ({ id: `option-${index + 1}`, label: labelFor(objectCount), objectCount }));
+  return { ...base, interactionMode: "visual-selection", visualOptions: options, correctOptionId: options.find((option) => option.objectCount === correct)!.id };
+}
+
+function sequenceFromBase(base: Question): Question {
+  const numbers = base.prompt.split(",").map((part) => part.trim());
+  const missingIndex = numbers.findIndex((part) => part === "?");
+  const sequence = numbers.map((part, index) => index === missingIndex ? base.correctAnswer : Number(part));
+  return { ...base, interactionMode: "sequence-completion", sequence, missingIndex: Math.max(0, missingIndex) };
+}
+
+function fractionColoringFromBase(base: Question, random: Random): Question {
+  const denominator = base.visual?.type === "fraction" ? base.visual.denominator : pick([2, 3, 4] as const, random);
+  const numerator = base.visual?.type === "fraction" ? base.visual.numerator : integer(1, denominator - 1, random);
+  const model = base.visual?.type === "fraction" && base.visual.model === "chocolate-bar" ? "chocolate-bar" : pick(["rectangle", "circle", "chocolate-bar"] as const, random);
+  return { ...base, interactionMode: "fraction-coloring", prompt: `Color ${fractionLabel(numerator, denominator)} of the ${model === "chocolate-bar" ? "chocolate bar" : "shape"}.`, numerator, denominator, model, correctAnswer: numerator, hint: "The bottom number tells us how many equal parts there are. The top number tells us how many parts to color." };
+}
+
+function withInteraction(base: Question, index: number, random: Random): Question {
+  if (base.kind === "word-problem") return base;
+  if (base.kind === "time") return { ...base, interactionMode: "multiple-choice", choices: choicesForQuestion(base, random), ...(base.choiceLabels ? { choiceLabels: base.choiceLabels } : {}) };
+  if (base.kind === "fraction") return index % 2 === 0 ? fractionColoringFromBase(base, random) : visualSelectionFromBase(base, random);
+  if (base.kind === "measurement" && base.templateId === "measurement-ruler") return base;
+  if (base.kind === "measurement" || base.kind === "graph" || base.kind === "place-value" && base.templateId === "place-value-expanded") return visualSelectionFromBase(base, random);
+  if (base.kind === "number-comparison" || base.kind === "money" && (base.templateId === "money-identify-coin" || base.templateId === "money-compare-amounts")) return { ...base, interactionMode: "multiple-choice", choices: choicesForQuestion(base, random), ...(base.choiceLabels ? { choiceLabels: base.choiceLabels } : {}) };
+  if (base.kind === "money" && base.templateId === "money-exact-amount") return visualSelectionFromBase(base, random);
+  if (base.kind === "skip-counting" && base.templateId === "skip-counting-missing") return sequenceFromBase(base);
+  if ((base.kind === "addition" || base.kind === "number-bond") && index % 7 === 0) return matchingFromSamples(base, random);
+  if (index % 6 === 0) return { ...base, interactionMode: "multiple-choice", choices: choicesForQuestion(base, random), ...(base.choiceLabels ? { choiceLabels: base.choiceLabels } : {}) };
+  return base;
 }
 
 /** A stable seed makes a session replayable in tests while changing values between attempts. */

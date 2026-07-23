@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 import { generateLessonQuestions, generateSkillQuestion, validateQuestion } from "../lib/lessons/questions";
-import type { MatchingQuestion } from "../lib/lessons/types";
+import type { MatchingQuestion, VisualSelectionQuestion } from "../lib/lessons/types";
 
 test("multiple-choice options are unique, complete, and deterministic across 1,000 seeds", () => {
   for (let seed = 0; seed < 1_000; seed += 1) {
@@ -38,7 +38,7 @@ test("the displayed matching sums keep their arithmetic answers in the answer ba
 
 const matchingFixture = (overrides: Partial<MatchingQuestion>): MatchingQuestion => ({
   id: "matching-fixture", questionKey: "matching-fixture", operandKeys: ["matching-fixture"], kind: "addition", templateId: "addition-sum", difficulty: "review", prompt: "Match each sum.", correctAnswer: 3, hint: "Try again.", interactionMode: "matching",
-  pairs: [{ id: "one", prompt: "1 + 1", answer: 2, label: "2" }, { id: "two", prompt: "1 + 2", answer: 3, label: "3" }, { id: "three", prompt: "2 + 2", answer: 4, label: "4" }], answerBank: [2, 3, 4], ...overrides,
+  explanation: "Each sum has one answer.", encouragement: ["Nice matching."], pairs: [{ id: "one", prompt: "1 + 1", answer: 2, label: "2" }, { id: "two", prompt: "1 + 2", answer: 3, label: "3" }, { id: "three", prompt: "2 + 2", answer: 4, label: "4" }], answerBank: [2, 3, 4], ...overrides,
 });
 
 test("matching validation rejects malformed or impossible activities", () => {
@@ -49,4 +49,26 @@ test("matching validation rejects malformed or impossible activities", () => {
   assert.equal(validateQuestion(matchingFixture({ pairs: [{ id: "one", prompt: "", answer: 2, label: "2" }, { id: "two", prompt: "1 + 2", answer: 3, label: "3" }, { id: "three", prompt: "2 + 2", answer: 4, label: "4" }] })), false, "empty pair prompt");
   assert.equal(validateQuestion(matchingFixture({ answerBank: [2, 3, 4, 5] })), false, "unmapped extra answer");
   assert.equal(validateQuestion(matchingFixture({ pairs: [{ id: "one", prompt: "1 + 1", answer: 2, label: "2" }, { id: "two", prompt: "1 + 2", answer: 2, label: "2" }, { id: "three", prompt: "2 + 2", answer: 4, label: "4" }], answerBank: [2, 4] })), false, "ambiguous duplicate answers");
+});
+
+const visualSelectionFixture = (overrides: Partial<VisualSelectionQuestion>): VisualSelectionQuestion => ({
+  id: "visual-fixture",
+  questionKey: "visual-fixture",
+  operandKeys: ["visual-fixture"],
+  kind: "measurement",
+  templateId: "measurement-compare-length",
+  difficulty: "review",
+  prompt: "Which object is longer?",
+  correctAnswer: 8,
+  hint: "Compare the pictures.",
+  explanation: "The marker is longest.",
+  encouragement: ["Careful comparing."],
+  interactionMode: "visual-selection",
+  visualOptions: [{ id: "pencil", label: "pencil", objectCount: 4 }, { id: "marker", label: "marker", objectCount: 8 }, { id: "crayon", label: "crayon", objectCount: 6 }],
+  correctOptionId: "marker",
+  ...overrides,
+});
+
+test("visual-selection validation rejects a correct option that does not match the answer", () => {
+  assert.equal(validateQuestion(visualSelectionFixture({ correctOptionId: "pencil" })), false);
 });

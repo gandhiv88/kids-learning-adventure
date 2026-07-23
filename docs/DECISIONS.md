@@ -141,3 +141,23 @@ Context: Larger arithmetic should follow conceptual readiness, not milestone num
 Decision: Three- and four-digit arithmetic unlock through prerequisite mastery.
 
 Consequences: Milestone 3A must not add three- or four-digit arithmetic. Later implementation should require place value, regrouping, and estimation prerequisites.
+
+## 2026-07-21 - Grouped Real-World Lessons
+
+Status: Accepted and implemented in Milestone 3B.
+
+Context: The app needs to expand from arithmetic practice into practical math without building a large world-map system yet.
+
+Decision: Lessons are organized into data-defined groups: Number Forest, Market Town, Clock Tower, Fraction Kitchen, Measurement Meadow, and Graph Garden.
+
+Consequences: The active UI can show grouped lessons now, and future world-map work can consume lesson groups without moving lesson logic into React components.
+
+## 2026-07-21 - Configurable Currency Model
+
+Status: Accepted and implemented in Milestone 3B.
+
+Context: Money lessons initially ship with US currency, but future currencies should not require rewriting the learning engine.
+
+Decision: Money generation depends on a currency configuration with code, symbols, minor-unit conversion, and denominations.
+
+Consequences: Future India, UK, Europe, or other currency support should be implemented as configuration unless a new visual or interaction mode is required.
